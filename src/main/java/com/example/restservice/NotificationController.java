@@ -20,13 +20,15 @@ import com.microsoft.graph.httpcore.ICoreAuthenticationProvider;
 import com.microsoft.graph.logger.DefaultLogger;
 
 import org.springframework.http.*;
+
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.JsonPrimitive;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.ExecutorService;
 import java.util.Calendar;
 import java.util.HashSet;
 
@@ -71,13 +73,15 @@ public class NotificationController {
     public String subscribe() throws KeyStoreException, FileNotFoundException, IOException, CertificateException,
             NoSuchAlgorithmException, InterruptedException, ExecutionException {
 
-        
+        final ExecutorService executor = null;
+
         return getAccessToken()
                         .thenApply(r -> getClient(r))
-                        .thenCompose(c -> createSubscription(c))
-                        .thenApply(s -> getMessageToDisplay(s)).get();
+                        .thenApply(c -> createSubscription(c))
+                        .thenApply(f -> Futures.transform(f, s -> getMessageToDisplay(s), executor).get())
+                        .get();
     }
-    private CompletableFuture<Subscription> createSubscription(IGraphServiceClient graphClient) {
+    private ListenableFuture<Subscription> createSubscription(IGraphServiceClient graphClient) {
             graphClient.setServiceRoot("https://graph.microsoft.com/beta");
             Subscription subscription = new Subscription();
             subscription.changeType = this.changeType;
@@ -97,7 +101,7 @@ public class NotificationController {
                 LOGGER.info(GetBase64EncodedCertificate());
             }
 
-            return graphClient.subscriptions().buildRequest().futurePost(subscription);
+            return (ListenableFuture<Subscription>) graphClient.subscriptions().buildRequest().futurePost(subscription);
     }
     private IGraphServiceClient getClient(IAuthenticationResult authResult) {
         final ICoreAuthenticationProvider authProvider = new ICoreAuthenticationProvider() {
