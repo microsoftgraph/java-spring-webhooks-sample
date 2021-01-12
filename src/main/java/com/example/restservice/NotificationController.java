@@ -8,16 +8,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.microsoft.graph.requests.extensions.*;
 import com.microsoft.graph.serializer.DefaultSerializer;
-import com.microsoft.graph.auth.confidentialClient.*;
 import com.microsoft.graph.models.extensions.*;
-import com.microsoft.graph.auth.enums.*;
+import com.microsoft.aad.msal4j.ClientCredentialFactory;
+import com.microsoft.aad.msal4j.ClientCredentialParameters;
+import com.microsoft.aad.msal4j.ConfidentialClientApplication;
+import com.microsoft.aad.msal4j.IAuthenticationResult;
+import com.microsoft.aad.msal4j.IClientCredential;
+import com.microsoft.graph.core.GraphServiceClient;
+import com.microsoft.graph.core.IGraphServiceClient;
+import com.microsoft.graph.httpcore.ICoreAuthenticationProvider;
 import com.microsoft.graph.logger.DefaultLogger;
 
 import org.springframework.http.*;
 import com.google.gson.JsonPrimitive;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.Calendar;
+import java.util.HashSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.*;
@@ -27,19 +39,21 @@ import org.apache.commons.codec.binary.Base64;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import io.jsonwebtoken.*;
+import okhttp3.Request;
+
 import org.apache.commons.text.StringEscapeUtils;
 
 @RestController
 public class NotificationController {
-//region app registration information
-    private final String clientId = "";
+    // region app registration information
+    private final String clientId = "24f1a7a0-bda7-4bf8-b8a6-c915da1d0ddb";
     private final String clientSecret = "";
-    private final String tenantId = "";
+    private final String tenantId = "bd4c6c31-c49c-4ab6-a0aa-742e07c20232";
     // endregion
     // region subscription information
-    private final String publicUrl = ""; // eg https://c2ddde53.ngrok.io no trailing slash
-    private final String resource = ""; // eg
-                                        // teams/9c05f27f-f866-4cc0-b4c2-6225a4568bc5/channels/19:015c392a3030451f8b52fac6084be56d@thread.skype/messages
+    private final String publicUrl = "https://277947974cc9.ngrok.io"; // eg https://c2ddde53.ngrok.io no trailing slash
+    private final String resource = "teams/01b4b70e-2ea6-432f-a3d7-eefd826c2a8e/channels/19:81cf89b7ecef4e7994a84ee2cfb3248a@thread.skype/messages"; // eg
+    // teams/9c05f27f-f866-4cc0-b4c2-6225a4568bc5/channels/19:015c392a3030451f8b52fac6084be56d@thread.skype/messages
     private final String changeType = "created";
     // endregion
     // region certificate information
@@ -48,40 +62,68 @@ public class NotificationController {
     private final String storepass = "";
     // endregion
 
-    private final NationalCloud endpoint = NationalCloud.Global;
-    private final List<String> scopes = Arrays.asList("https://graph.microsoft.com/.default");
+    private final Set<String> scopes = new HashSet<>(Arrays.asList("https://graph.microsoft.com/.default"));
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
     private JwkKeyResolver jwksResolver;
 
     @GetMapping("/notification")
     @ResponseBody
     public String subscribe() throws KeyStoreException, FileNotFoundException, IOException, CertificateException,
-            NoSuchAlgorithmException {
-        final ClientCredentialProvider authProvider = new ClientCredentialProvider(this.clientId, this.scopes,
-                this.clientSecret, this.tenantId, this.endpoint);
+            NoSuchAlgorithmException, InterruptedException, ExecutionException {
+
+        
+        return getAccessToken()
+                        .thenApply(r -> getClient(r))
+                        .thenCompose(c -> createSubscription(c))
+                        .thenApply(s -> getMessageToDisplay(s)).get();
+    }
+    private CompletableFuture<Subscription> createSubscription(IGraphServiceClient graphClient) {
+            graphClient.setServiceRoot("https://graph.microsoft.com/beta");
+            Subscription subscription = new Subscription();
+            subscription.changeType = this.changeType;
+            subscription.notificationUrl = this.publicUrl + "/notification";
+            subscription.resource = this.resource;
+            subscription.expirationDateTime = Calendar.getInstance();
+            subscription.clientState = "secretClientValue";
+
+            subscription.expirationDateTime.add(Calendar.HOUR, 1);
+
+            if (this.resource.startsWith("teams")) {
+                subscription.additionalDataManager().put("includeResourceData", new JsonPrimitive(true));
+                subscription.additionalDataManager().put("encryptionCertificate",
+                        new JsonPrimitive(GetBase64EncodedCertificate()));
+                subscription.additionalDataManager().put("encryptionCertificateId", new JsonPrimitive(this.alias));
+                LOGGER.warn("encoded cert");
+                LOGGER.info(GetBase64EncodedCertificate());
+            }
+
+            return graphClient.subscriptions().buildRequest().futurePost(subscription);
+    }
+    private IGraphServiceClient getClient(IAuthenticationResult authResult) {
+        final ICoreAuthenticationProvider authProvider = new ICoreAuthenticationProvider() {
+
+            @Override
+            public Request authenticateRequest(Request request) {
+                if(request.url().host().toLowerCase().contains("graph"))
+                    return request.newBuilder().addHeader("Authorization", "Bearer " + authResult.accessToken()).build();
+                else
+                    return request;
+            }
+
+        };
 
         final IGraphServiceClient graphClient = GraphServiceClient.builder().authenticationProvider(authProvider)
                 .buildClient();
-        graphClient.setServiceRoot("https://graph.microsoft.com/beta");
-        Subscription subscription = new Subscription();
-        subscription.changeType = this.changeType;
-        subscription.notificationUrl = this.publicUrl + "/notification";
-        subscription.resource = this.resource;
-        subscription.expirationDateTime = Calendar.getInstance();
-        subscription.clientState = "secretClientValue";
-
-        subscription.expirationDateTime.add(Calendar.HOUR, 1);
-
-        if (this.resource.startsWith("teams")) {
-            subscription.additionalDataManager().put("includeResourceData", new JsonPrimitive(true));
-            subscription.additionalDataManager().put("encryptionCertificate",
-                    new JsonPrimitive(GetBase64EncodedCertificate()));
-            subscription.additionalDataManager().put("encryptionCertificateId", new JsonPrimitive(this.alias));
-            LOGGER.warn("encoded cert");
-            LOGGER.info(GetBase64EncodedCertificate());
-        }
-
-        subscription = graphClient.subscriptions().buildRequest().post(subscription);
+        return graphClient;
+    }
+    private CompletableFuture<IAuthenticationResult> getAccessToken() {
+        final IClientCredential credential = ClientCredentialFactory.createFromSecret(clientSecret);
+        final ConfidentialClientApplication app = ConfidentialClientApplication
+                                                                    .builder(clientId, credential)
+                                                                    .build();
+        return app.acquireToken(ClientCredentialParameters.builder(scopes).build());
+    }
+    private String getMessageToDisplay(Subscription subscription) {
         return "Subscribed to entity with subscription id " + subscription.id;
     }
 
