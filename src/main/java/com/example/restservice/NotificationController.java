@@ -6,14 +6,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.microsoft.graph.requests.extensions.*;
 import com.microsoft.graph.serializer.DefaultSerializer;
 import com.microsoft.graph.models.extensions.*;
-import com.microsoft.aad.msal4j.ClientCredentialFactory;
-import com.microsoft.aad.msal4j.ClientCredentialParameters;
-import com.microsoft.aad.msal4j.ConfidentialClientApplication;
-import com.microsoft.aad.msal4j.IAuthenticationResult;
-import com.microsoft.aad.msal4j.IClientCredential;
 import com.microsoft.graph.core.GraphServiceClient;
 import com.microsoft.graph.core.IGraphServiceClient;
 import com.microsoft.graph.httpcore.ICoreAuthenticationProvider;
@@ -21,16 +15,16 @@ import com.microsoft.graph.logger.DefaultLogger;
 
 import org.springframework.http.*;
 
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.azure.core.credential.AccessToken;
+import com.azure.core.credential.TokenRequestContext;
+import com.azure.identity.ClientSecretCredential;
+import com.azure.identity.ClientSecretCredentialBuilder;
 import com.google.gson.JsonPrimitive;
+import java.util.List;
 import java.util.Arrays;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.Calendar;
-import java.util.HashSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +47,7 @@ public class NotificationController {
     private final String tenantId = "bd4c6c31-c49c-4ab6-a0aa-742e07c20232";
     // endregion
     // region subscription information
-    private final String publicUrl = "https://277947974cc9.ngrok.io"; // eg https://c2ddde53.ngrok.io no trailing slash
+    private final String publicUrl = "https://d0ce1e006d23.ngrok.io"; // eg https://c2ddde53.ngrok.io no trailing slash
     private final String resource = "teams/01b4b70e-2ea6-432f-a3d7-eefd826c2a8e/channels/19:81cf89b7ecef4e7994a84ee2cfb3248a@thread.skype/messages"; // eg
     // teams/9c05f27f-f866-4cc0-b4c2-6225a4568bc5/channels/19:015c392a3030451f8b52fac6084be56d@thread.skype/messages
     private final String changeType = "created";
@@ -64,7 +58,7 @@ public class NotificationController {
     private final String storepass = "";
     // endregion
 
-    private final Set<String> scopes = new HashSet<>(Arrays.asList("https://graph.microsoft.com/.default"));
+    private final List<String> scopes = Arrays.asList("https://graph.microsoft.com/.default");
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
     private JwkKeyResolver jwksResolver;
 
@@ -73,15 +67,13 @@ public class NotificationController {
     public String subscribe() throws KeyStoreException, FileNotFoundException, IOException, CertificateException,
             NoSuchAlgorithmException, InterruptedException, ExecutionException {
 
-        final ExecutorService executor = null;
-
         return getAccessToken()
                         .thenApply(r -> getClient(r))
-                        .thenApply(c -> createSubscription(c))
-                        .thenApply(f -> Futures.transform(f, s -> getMessageToDisplay(s), executor).get())
+                        .thenCompose(c -> createSubscription(c))
+                        .thenApply(s -> getMessageToDisplay(s))
                         .get();
     }
-    private ListenableFuture<Subscription> createSubscription(IGraphServiceClient graphClient) {
+    private CompletableFuture<Subscription> createSubscription(IGraphServiceClient graphClient) {
             graphClient.setServiceRoot("https://graph.microsoft.com/beta");
             Subscription subscription = new Subscription();
             subscription.changeType = this.changeType;
@@ -101,15 +93,15 @@ public class NotificationController {
                 LOGGER.info(GetBase64EncodedCertificate());
             }
 
-            return (ListenableFuture<Subscription>) graphClient.subscriptions().buildRequest().futurePost(subscription);
+            return graphClient.subscriptions().buildRequest().futurePost(subscription);
     }
-    private IGraphServiceClient getClient(IAuthenticationResult authResult) {
+    private IGraphServiceClient getClient(AccessToken authResult) {
         final ICoreAuthenticationProvider authProvider = new ICoreAuthenticationProvider() {
 
             @Override
             public Request authenticateRequest(Request request) {
                 if(request.url().host().toLowerCase().contains("graph"))
-                    return request.newBuilder().addHeader("Authorization", "Bearer " + authResult.accessToken()).build();
+                    return request.newBuilder().addHeader("Authorization", "Bearer " + authResult.getToken()).build();
                 else
                     return request;
             }
@@ -120,12 +112,13 @@ public class NotificationController {
                 .buildClient();
         return graphClient;
     }
-    private CompletableFuture<IAuthenticationResult> getAccessToken() {
-        final IClientCredential credential = ClientCredentialFactory.createFromSecret(clientSecret);
-        final ConfidentialClientApplication app = ConfidentialClientApplication
-                                                                    .builder(clientId, credential)
-                                                                    .build();
-        return app.acquireToken(ClientCredentialParameters.builder(scopes).build());
+    private CompletableFuture<AccessToken> getAccessToken() {
+        final ClientSecretCredential defaultCredential = new ClientSecretCredentialBuilder()
+                                                    .clientId(clientId)
+                                                    .clientSecret(clientSecret)
+                                                    .tenantId(tenantId)
+                                                    .build();
+        return defaultCredential.getToken(new TokenRequestContext().setScopes(scopes)).toFuture();
     }
     private String getMessageToDisplay(Subscription subscription) {
         return "Subscribed to entity with subscription id " + subscription.id;
@@ -138,11 +131,16 @@ public class NotificationController {
         return ks;
     }
 
-    private String GetBase64EncodedCertificate() throws CertificateEncodingException, KeyStoreException,
-            FileNotFoundException, IOException, CertificateException, NoSuchAlgorithmException {
-        final KeyStore ks = this.GetCertificateStore();
-        final java.security.cert.Certificate cert = ks.getCertificate(this.alias);
-        return new String(Base64.encodeBase64(cert.getEncoded()));
+    private String GetBase64EncodedCertificate() {
+        try {
+            final KeyStore ks = this.GetCertificateStore();
+            final java.security.cert.Certificate cert = ks.getCertificate(this.alias);
+            return new String(Base64.encodeBase64(cert.getEncoded()));
+        }
+        catch (Exception ex) {
+            this.LOGGER.error("Error getting the certificate", ex);
+            return null;
+        }
     }
 
     private byte[] GetEncryptionKey(final String base64encodedSymetricKey) throws KeyStoreException,
