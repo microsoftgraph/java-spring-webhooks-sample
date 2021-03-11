@@ -20,7 +20,7 @@ extensions:
 ---
 # Sample Application - Microsoft Graph Change Notifications with Resource Data
 
-![Java CI with Maven](https://github.com/microsoftgraph/java-spring-webhooks-sample/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)
+![Java CI with Maven](https://github.com/microsoftgraph/java-spring-webhooks-sample/workflows/Java%20CI%20with%20Maven/badge.svg?branch=main)
 
 ## Use this sample application to receive Change Notifications with Resource Data
 

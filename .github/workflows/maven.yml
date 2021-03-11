@@ -5,12 +5,12 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ main, develop ]
     path-ignore:
     - 'docs/**'
     - '*.md'
   pull_request:
-    branches: [ master, develop ]
+    branches: [ main, develop ]
     path-ignore:
       - 'docs/**'
       - '*.md'
