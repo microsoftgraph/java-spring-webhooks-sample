@@ -10,15 +10,13 @@ import com.microsoft.graph.serializer.DefaultSerializer;
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.requests.GraphServiceClient;
 import com.microsoft.graph.authentication.IAuthenticationProvider;
+import com.microsoft.graph.authentication.TokenCredentialAuthProvider;
 import com.microsoft.graph.logger.DefaultLogger;
 
 import org.springframework.http.*;
 
-import com.azure.core.credential.AccessToken;
-import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
-import com.google.gson.JsonPrimitive;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -27,7 +25,6 @@ import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.*;
-import java.net.URL;
 import java.security.*;
 import java.security.cert.*;
 import java.time.OffsetDateTime;
@@ -68,55 +65,39 @@ public class NotificationController {
     public String subscribe() throws KeyStoreException, FileNotFoundException, IOException, CertificateException,
             NoSuchAlgorithmException, InterruptedException, ExecutionException {
 
-        return getAccessToken()
-                        .thenApply(r -> getClient(r))
-                        .thenCompose(c -> createSubscription(c))
+        return createSubscription()
                         .thenApply(s -> getMessageToDisplay(s))
                         .get();
     }
-    private CompletableFuture<Subscription> createSubscription(final GraphServiceClient<Request> graphClient) {
-            graphClient.setServiceRoot("https://graph.microsoft.com/beta");
-            Subscription subscription = new Subscription();
-            subscription.changeType = this.changeType;
-            subscription.notificationUrl = this.publicUrl + "/notification";
-            subscription.resource = this.resource;
-            subscription.expirationDateTime = OffsetDateTime.now().plusHours(1L);
-            subscription.clientState = "secretClientValue";
+    private CompletableFuture<Subscription> createSubscription() {
+        final GraphServiceClient<Request> graphClient = getClient();
+        graphClient.setServiceRoot("https://graph.microsoft.com/beta");
+        final Subscription subscription = new Subscription();
+        subscription.changeType = this.changeType;
+        subscription.notificationUrl = this.publicUrl + "/notification";
+        subscription.resource = this.resource;
+        subscription.expirationDateTime = OffsetDateTime.now().plusHours(1L);
+        subscription.clientState = "secretClientValue";
 
-            if (this.resource.startsWith("teams")) {
-                subscription.additionalDataManager().put("includeResourceData", new JsonPrimitive(true));
-                subscription.additionalDataManager().put("encryptionCertificate",
-                        new JsonPrimitive(GetBase64EncodedCertificate()));
-                subscription.additionalDataManager().put("encryptionCertificateId", new JsonPrimitive(this.alias));
-                LOGGER.warn("encoded cert");
-                LOGGER.info(GetBase64EncodedCertificate());
-            }
+        if (this.resource.startsWith("teams")) {
+            subscription.includeResourceData = true;
+            subscription.encryptionCertificate = GetBase64EncodedCertificate();
+            subscription.encryptionCertificateId = this.alias;
+            LOGGER.warn("encoded cert");
+            LOGGER.info(GetBase64EncodedCertificate());
+        }
 
-            return graphClient.subscriptions().buildRequest().postAsync(subscription);
+        return graphClient.subscriptions().buildRequest().postAsync(subscription);
     }
     @SuppressWarnings("unchecked")
-    private GraphServiceClient<Request> getClient(final AccessToken authResult) {
-        final IAuthenticationProvider authProvider = new IAuthenticationProvider() {
-            @Override
-            public CompletableFuture<String> getAuthorizationTokenAsync(URL requestUrl) {
-                if(requestUrl.getHost().toLowerCase().contains("graph")) {
-                    return CompletableFuture.completedFuture(authResult.getToken());
-                } else {
-                    return CompletableFuture.completedFuture("");
-                }
-            }
-
-        };
-
-        return GraphServiceClient.builder().authenticationProvider(authProvider).buildClient();
-    }
-    private CompletableFuture<AccessToken> getAccessToken() {
+    private GraphServiceClient<Request> getClient() {
         final ClientSecretCredential defaultCredential = new ClientSecretCredentialBuilder()
                                                     .clientId(clientId)
                                                     .clientSecret(clientSecret)
                                                     .tenantId(tenantId)
                                                     .build();
-        return defaultCredential.getToken(new TokenRequestContext().setScopes(scopes)).toFuture();
+        final IAuthenticationProvider authProvider = new TokenCredentialAuthProvider(this.scopes, defaultCredential);
+        return GraphServiceClient.builder().authenticationProvider(authProvider).buildClient();
     }
     private String getMessageToDisplay(Subscription subscription) {
         return "Subscribed to entity with subscription id " + subscription.id;
