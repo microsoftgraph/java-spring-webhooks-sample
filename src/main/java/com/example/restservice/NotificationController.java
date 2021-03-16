@@ -40,13 +40,13 @@ import org.apache.commons.text.StringEscapeUtils;
 @RestController
 public class NotificationController {
     // region app registration information
-    private final String clientId = "24f1a7a0-bda7-4bf8-b8a6-c915da1d0ddb";
+    private final String clientId = "";
     private final String clientSecret = "";
-    private final String tenantId = "bd4c6c31-c49c-4ab6-a0aa-742e07c20232";
+    private final String tenantId = "";
     // endregion
     // region subscription information
-    private final String publicUrl = "https://d0ce1e006d23.ngrok.io"; // eg https://c2ddde53.ngrok.io no trailing slash
-    private final String resource = "teams/01b4b70e-2ea6-432f-a3d7-eefd826c2a8e/channels/19:81cf89b7ecef4e7994a84ee2cfb3248a@thread.skype/messages"; // eg
+    private final String publicUrl = ""; // eg https://c2ddde53.ngrok.io no trailing slash
+    private final String resource = ""; // eg
     // teams/9c05f27f-f866-4cc0-b4c2-6225a4568bc5/channels/19:015c392a3030451f8b52fac6084be56d@thread.skype/messages
     private final String changeType = "created";
     // endregion
