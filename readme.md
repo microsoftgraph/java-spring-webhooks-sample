@@ -116,7 +116,7 @@ java -jar target/rest-service-0.0.1-SNAPSHOT.jar
 
 ### Create the subscription
 
-Open a browser to `https://<yourNgrokUrl>/notification` (or `http://localhost:8080`).
+Open a browser to `https://<yourNgrokUrl>/notification` (or `http://localhost:8080/notification`).
 
 ### Testing the application
 

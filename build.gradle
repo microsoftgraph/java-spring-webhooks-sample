@@ -2,11 +2,13 @@ plugins {
 	id 'org.springframework.boot' version '2.4.3'
 	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 	id 'java'
+	id 'application'
 }
 
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '1.8'
+mainClassName = 'com.example.restservice.RestServiceApplication'
 
 repositories {
 	mavenCentral()
@@ -15,13 +17,14 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'com.microsoft.graph:microsoft-graph-beta:0.6.0-SNAPSHOT'
-	implementation 'com.microsoft.graph:microsoft-graph-core:1.0.9'
-	implementation 'org.apache.oltu.oauth2:org.apache.oltu.oauth2.client:1.0.2'
+	implementation 'com.microsoft.graph:microsoft-graph-beta:0.7.0-SNAPSHOT'
+	implementation 'com.microsoft.graph:microsoft-graph-core:2.0.0'
 	implementation 'org.apache.commons:commons-text:1.9'
 	implementation 'com.auth0:jwks-rsa:0.17.0'
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
-	implementation 'com.microsoft.graph:microsoft-graph-auth:0.3.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
+	implementation 'com.azure:azure-identity:1.2.1'
+	implementation 'com.microsoft.azure:msal4j:1.8.1'
 	implementation 'io.jsonwebtoken:jjwt-impl:0.11.2'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.2'
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {

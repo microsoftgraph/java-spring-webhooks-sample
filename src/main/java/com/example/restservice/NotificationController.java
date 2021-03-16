@@ -6,32 +6,40 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.microsoft.graph.requests.extensions.*;
 import com.microsoft.graph.serializer.DefaultSerializer;
-import com.microsoft.graph.auth.confidentialClient.*;
-import com.microsoft.graph.models.extensions.*;
-import com.microsoft.graph.auth.enums.*;
+import com.microsoft.graph.models.*;
+import com.microsoft.graph.requests.GraphServiceClient;
+import com.microsoft.graph.authentication.IAuthenticationProvider;
+import com.microsoft.graph.authentication.TokenCredentialAuthProvider;
 import com.microsoft.graph.logger.DefaultLogger;
 
 import org.springframework.http.*;
-import com.google.gson.JsonPrimitive;
-import java.util.Arrays;
+
+import com.azure.identity.ClientSecretCredential;
+import com.azure.identity.ClientSecretCredentialBuilder;
 import java.util.List;
-import java.util.Calendar;
+import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.security.*;
 import java.security.cert.*;
+import java.time.OffsetDateTime;
+
 import org.apache.commons.codec.binary.Base64;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import io.jsonwebtoken.*;
+import okhttp3.Request;
+
 import org.apache.commons.text.StringEscapeUtils;
 
 @RestController
 public class NotificationController {
-//region app registration information
+    // region app registration information
     private final String clientId = "";
     private final String clientSecret = "";
     private final String tenantId = "";
@@ -39,7 +47,7 @@ public class NotificationController {
     // region subscription information
     private final String publicUrl = ""; // eg https://c2ddde53.ngrok.io no trailing slash
     private final String resource = ""; // eg
-                                        // teams/9c05f27f-f866-4cc0-b4c2-6225a4568bc5/channels/19:015c392a3030451f8b52fac6084be56d@thread.skype/messages
+    // teams/9c05f27f-f866-4cc0-b4c2-6225a4568bc5/channels/19:015c392a3030451f8b52fac6084be56d@thread.skype/messages
     private final String changeType = "created";
     // endregion
     // region certificate information
@@ -48,7 +56,6 @@ public class NotificationController {
     private final String storepass = "";
     // endregion
 
-    private final NationalCloud endpoint = NationalCloud.Global;
     private final List<String> scopes = Arrays.asList("https://graph.microsoft.com/.default");
     private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
     private JwkKeyResolver jwksResolver;
@@ -56,32 +63,43 @@ public class NotificationController {
     @GetMapping("/notification")
     @ResponseBody
     public String subscribe() throws KeyStoreException, FileNotFoundException, IOException, CertificateException,
-            NoSuchAlgorithmException {
-        final ClientCredentialProvider authProvider = new ClientCredentialProvider(this.clientId, this.scopes,
-                this.clientSecret, this.tenantId, this.endpoint);
+            NoSuchAlgorithmException, InterruptedException, ExecutionException {
 
-        final IGraphServiceClient graphClient = GraphServiceClient.builder().authenticationProvider(authProvider)
-                .buildClient();
+        return createSubscription()
+                        .thenApply(s -> getMessageToDisplay(s))
+                        .get();
+    }
+    private CompletableFuture<Subscription> createSubscription() {
+        final GraphServiceClient<Request> graphClient = getClient();
         graphClient.setServiceRoot("https://graph.microsoft.com/beta");
-        Subscription subscription = new Subscription();
+        final Subscription subscription = new Subscription();
         subscription.changeType = this.changeType;
         subscription.notificationUrl = this.publicUrl + "/notification";
         subscription.resource = this.resource;
-        subscription.expirationDateTime = Calendar.getInstance();
+        subscription.expirationDateTime = OffsetDateTime.now().plusHours(1L);
         subscription.clientState = "secretClientValue";
 
-        subscription.expirationDateTime.add(Calendar.HOUR, 1);
-
         if (this.resource.startsWith("teams")) {
-            subscription.additionalDataManager().put("includeResourceData", new JsonPrimitive(true));
-            subscription.additionalDataManager().put("encryptionCertificate",
-                    new JsonPrimitive(GetBase64EncodedCertificate()));
-            subscription.additionalDataManager().put("encryptionCertificateId", new JsonPrimitive(this.alias));
+            subscription.includeResourceData = true;
+            subscription.encryptionCertificate = GetBase64EncodedCertificate();
+            subscription.encryptionCertificateId = this.alias;
             LOGGER.warn("encoded cert");
             LOGGER.info(GetBase64EncodedCertificate());
         }
 
-        subscription = graphClient.subscriptions().buildRequest().post(subscription);
+        return graphClient.subscriptions().buildRequest().postAsync(subscription);
+    }
+    @SuppressWarnings("unchecked")
+    private GraphServiceClient<Request> getClient() {
+        final ClientSecretCredential defaultCredential = new ClientSecretCredentialBuilder()
+                                                    .clientId(clientId)
+                                                    .clientSecret(clientSecret)
+                                                    .tenantId(tenantId)
+                                                    .build();
+        final IAuthenticationProvider authProvider = new TokenCredentialAuthProvider(this.scopes, defaultCredential);
+        return GraphServiceClient.builder().authenticationProvider(authProvider).buildClient();
+    }
+    private String getMessageToDisplay(Subscription subscription) {
         return "Subscribed to entity with subscription id " + subscription.id;
     }
 
@@ -92,11 +110,16 @@ public class NotificationController {
         return ks;
     }
 
-    private String GetBase64EncodedCertificate() throws CertificateEncodingException, KeyStoreException,
-            FileNotFoundException, IOException, CertificateException, NoSuchAlgorithmException {
-        final KeyStore ks = this.GetCertificateStore();
-        final java.security.cert.Certificate cert = ks.getCertificate(this.alias);
-        return new String(Base64.encodeBase64(cert.getEncoded()));
+    private String GetBase64EncodedCertificate() {
+        try {
+            final KeyStore ks = this.GetCertificateStore();
+            final java.security.cert.Certificate cert = ks.getCertificate(this.alias);
+            return new String(Base64.encodeBase64(cert.getEncoded()));
+        }
+        catch (Exception ex) {
+            this.LOGGER.error("Error getting the certificate", ex);
+            return null;
+        }
     }
 
     private byte[] GetEncryptionKey(final String base64encodedSymetricKey) throws KeyStoreException,
