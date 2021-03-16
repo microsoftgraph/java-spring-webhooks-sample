@@ -7,10 +7,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.microsoft.graph.serializer.DefaultSerializer;
-import com.microsoft.graph.models.extensions.*;
-import com.microsoft.graph.core.GraphServiceClient;
-import com.microsoft.graph.core.IGraphServiceClient;
-import com.microsoft.graph.httpcore.ICoreAuthenticationProvider;
+import com.microsoft.graph.models.*;
+import com.microsoft.graph.requests.GraphServiceClient;
+import com.microsoft.graph.authentication.IAuthenticationProvider;
 import com.microsoft.graph.logger.DefaultLogger;
 
 import org.springframework.http.*;
@@ -24,13 +23,15 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.Calendar;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.*;
+import java.net.URL;
 import java.security.*;
 import java.security.cert.*;
+import java.time.OffsetDateTime;
+
 import org.apache.commons.codec.binary.Base64;
 import javax.crypto.*;
 import javax.crypto.spec.*;
@@ -73,16 +74,14 @@ public class NotificationController {
                         .thenApply(s -> getMessageToDisplay(s))
                         .get();
     }
-    private CompletableFuture<Subscription> createSubscription(IGraphServiceClient graphClient) {
+    private CompletableFuture<Subscription> createSubscription(final GraphServiceClient<Request> graphClient) {
             graphClient.setServiceRoot("https://graph.microsoft.com/beta");
             Subscription subscription = new Subscription();
             subscription.changeType = this.changeType;
             subscription.notificationUrl = this.publicUrl + "/notification";
             subscription.resource = this.resource;
-            subscription.expirationDateTime = Calendar.getInstance();
+            subscription.expirationDateTime = OffsetDateTime.now().plusHours(1L);
             subscription.clientState = "secretClientValue";
-
-            subscription.expirationDateTime.add(Calendar.HOUR, 1);
 
             if (this.resource.startsWith("teams")) {
                 subscription.additionalDataManager().put("includeResourceData", new JsonPrimitive(true));
@@ -93,24 +92,23 @@ public class NotificationController {
                 LOGGER.info(GetBase64EncodedCertificate());
             }
 
-            return graphClient.subscriptions().buildRequest().futurePost(subscription);
+            return graphClient.subscriptions().buildRequest().postAsync(subscription);
     }
-    private IGraphServiceClient getClient(AccessToken authResult) {
-        final ICoreAuthenticationProvider authProvider = new ICoreAuthenticationProvider() {
-
+    @SuppressWarnings("unchecked")
+    private GraphServiceClient<Request> getClient(final AccessToken authResult) {
+        final IAuthenticationProvider authProvider = new IAuthenticationProvider() {
             @Override
-            public Request authenticateRequest(Request request) {
-                if(request.url().host().toLowerCase().contains("graph"))
-                    return request.newBuilder().addHeader("Authorization", "Bearer " + authResult.getToken()).build();
-                else
-                    return request;
+            public CompletableFuture<String> getAuthorizationTokenAsync(URL requestUrl) {
+                if(requestUrl.getHost().toLowerCase().contains("graph")) {
+                    return CompletableFuture.completedFuture(authResult.getToken());
+                } else {
+                    return CompletableFuture.completedFuture("");
+                }
             }
 
         };
 
-        final IGraphServiceClient graphClient = GraphServiceClient.builder().authenticationProvider(authProvider)
-                .buildClient();
-        return graphClient;
+        return GraphServiceClient.builder().authenticationProvider(authProvider).buildClient();
     }
     private CompletableFuture<AccessToken> getAccessToken() {
         final ClientSecretCredential defaultCredential = new ClientSecretCredentialBuilder()
