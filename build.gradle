@@ -17,7 +17,7 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'com.microsoft.graph:microsoft-graph-beta:0.8.0-SNAPSHOT'
+	implementation 'com.microsoft.graph:microsoft-graph-beta:0.9.0-SNAPSHOT'
 	implementation 'com.microsoft.graph:microsoft-graph-core:2.0.0'
 	implementation 'org.apache.commons:commons-text:1.9'
 	implementation 'com.auth0:jwks-rsa:0.17.0'
