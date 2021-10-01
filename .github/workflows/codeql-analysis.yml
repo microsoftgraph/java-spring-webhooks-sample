@@ -3,11 +3,11 @@ name: "Code scanning - action"
 on:
   push:
     branches: [ main ]
-    path-ignore:
+    paths-ignore:
     - 'docs/**'
     - '*.md'
   pull_request:
-    path-ignore:
+    paths-ignore:
     - 'docs/**'
     - '*.md'
   schedule:
