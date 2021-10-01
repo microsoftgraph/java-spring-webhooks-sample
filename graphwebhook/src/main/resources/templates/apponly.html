@@ -1,24 +1,35 @@
-<!DOCTYPE HTML>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
   layout:decorate="~{layout}">
+
+<head>
+  <title>Teams channel message notifications</title>
+</head>
 
 <body>
   <div layout:fragment="content">
     <h1>Notifications</h1>
-    <p class="fs-5 mb-3">Notifications should appear below when new messages sent to any Teams channel in your organization.</p>
+    <p class="fs-5 mb-3">
+      Notifications should appear below when new messages sent to any Teams
+      channel in your organization.
+    </p>
     <div class="d-flex">
-      <button class="btn btn-outline-secondary me-2" type="button" data-bs-toggle="collapse" data-bs-target="#subscriptionDisplay">Show subscription</button>
-      <a class="btn btn-outline-secondary" href="home.html" th:href="@{/unsubscribeapponly(subscriptionId=${subscriptionId})}">Delete subscription</a>
+      <button class="btn btn-outline-secondary me-2" type="button" data-bs-toggle="collapse"
+        data-bs-target="#subscriptionDisplay">
+        Show subscription
+      </button>
+      <a class="btn btn-outline-secondary" href="home.html"
+        th:href="@{/unsubscribeapponly(subscriptionId=${subscriptionId})}">Delete subscription</a>
     </div>
     <div class="collapse mt-3" id="subscriptionDisplay">
       <pre class="wrapped-pre border bg-light p-2"><code th:text="${subscription}">Subscription here</code></pre>
     </div>
-    <hr/>
-    <table class="table">
+    <hr />
+    <table class="table" aria-label="notifications">
       <thead>
         <tr>
-          <th>Sender</th>
-          <th>Message</th>
+          <th id="sender">Sender</th>
+          <th id="message">Message</th>
         </tr>
       </thead>
       <tbody id="notifications"></tbody>
@@ -29,7 +40,9 @@
       const socket = io('http://localhost:8081/emitNotification');
 
       socket.on('notificationReceived', (notificationData) => {
-        console.log(`Received notification: ${JSON.stringify(notificationData)}`);
+        console.log(
+          `Received notification: ${JSON.stringify(notificationData)}`
+        );
 
         // Create a new table row with data from the notification
         const tableRow = document.createElement('tr');
@@ -51,3 +64,5 @@
     </script>
   </div>
 </body>
+
+</html>

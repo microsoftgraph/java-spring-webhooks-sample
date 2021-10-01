@@ -58,46 +58,46 @@ public class ListenController {
     @Autowired
     public ListenController(SocketIOServer socketIOServer) {
         socketIONamespace = socketIOServer.addNamespace("/emitNotification");
-        socketIONamespace.addEventListener("create_room", String.class, new DataListener<String>(){
+        socketIONamespace.addEventListener("create_room", String.class, new DataListener<String>() {
             @Override
-            public void onData(SocketIOClient client, String roomName, AckRequest ackSender) throws Exception {
-                log.info("Client {} creating room for subscription {}", client.getSessionId(), roomName);
+            public void onData(SocketIOClient client, String roomName, AckRequest ackSender)
+                    throws Exception {
+                log.info("Client {} creating room for subscription {}", client.getSessionId(),
+                        roomName);
                 client.joinRoom(roomName);
             }
         });
     }
 
-    @PostMapping(value = "/listen", headers = { "content-type=text/plain" })
+    @PostMapping(value = "/listen", headers = {"content-type=text/plain"})
     @ResponseBody
     public ResponseEntity<String> handleValidation(
-        @RequestParam(value = "validationToken") final String validationToken) {
-        return ResponseEntity.ok()
-            .contentType(MediaType.TEXT_PLAIN)
-            .body(validationToken);
+            @RequestParam(value = "validationToken") final String validationToken) {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(validationToken);
     }
 
     @PostMapping("/listen")
     public CompletableFuture<ResponseEntity<String>> handleNotification(
-        @RequestBody final String jsonPayload) {
+            @RequestBody final String jsonPayload) {
         final var serializer = new DefaultSerializer(new DefaultLogger());
-        final var notifications = serializer
-            .deserializeObject(jsonPayload, ChangeNotificationCollection.class);
+        final var notifications =
+                serializer.deserializeObject(jsonPayload, ChangeNotificationCollection.class);
 
         // Check for validation tokens
         boolean areTokensValid = true;
-        if (notifications.validationTokens != null &&
-            !notifications.validationTokens.isEmpty()) {
+        if (notifications.validationTokens != null && !notifications.validationTokens.isEmpty()) {
             areTokensValid = TokenHelper.areValidationTokensValid(new String[] {clientId},
-                new String[] {tenantId}, notifications.validationTokens, keyDiscoveryUrl);
+                    new String[] {tenantId}, notifications.validationTokens, keyDiscoveryUrl);
         }
 
         if (areTokensValid) {
-            for(ChangeNotification notification : notifications.value) {
+            for (ChangeNotification notification : notifications.value) {
                 // Look up subscription in store
-                var subscription = subscriptionStore
-                    .getSubscription(notification.subscriptionId.toString());
+                var subscription =
+                        subscriptionStore.getSubscription(notification.subscriptionId.toString());
 
-                if (subscription != null && subscription.clientState.equals(notification.clientState)) {
+                if (subscription != null
+                        && subscription.clientState.equals(notification.clientState)) {
                     if (notification.encryptedContent == null) {
                         processNewMessageNotification(notification, subscription);
                     } else {
@@ -110,31 +110,33 @@ public class ListenController {
         return CompletableFuture.completedFuture(ResponseEntity.accepted().body(""));
     }
 
-    private void processNewMessageNotification(final ChangeNotification notification, final SubscriptionRecord subscription) {
-        final var oauthClient = authorizedClientService
-            .loadAuthorizedClient("graph", subscription.userId);
+    private void processNewMessageNotification(final ChangeNotification notification,
+            final SubscriptionRecord subscription) {
+        final var oauthClient =
+                authorizedClientService.loadAuthorizedClient("graph", subscription.userId);
 
         final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
-        graphClient
-            .customRequest("/"+notification.resource, Message.class)
-            .buildRequest()
-            .getAsync()
-            .thenAccept(message -> socketIONamespace
-                .getRoomOperations(subscription.subscriptionId)
-                .sendEvent("notificationReceived", new NewMessageNotification(message)));
+        graphClient.customRequest("/" + notification.resource, Message.class).buildRequest()
+                .getAsync()
+                .thenAccept(message -> socketIONamespace
+                        .getRoomOperations(subscription.subscriptionId)
+                        .sendEvent("notificationReceived", new NewMessageNotification(message)));
     }
 
-    private void processNewChannelMessageNotification(final ChangeNotification notification, final SubscriptionRecord subscription) {
-        final var decryptedKey = certificateStore.getEncryptionKey(notification.encryptedContent.dataKey);
+    private void processNewChannelMessageNotification(final ChangeNotification notification,
+            final SubscriptionRecord subscription) {
+        final var decryptedKey =
+                certificateStore.getEncryptionKey(notification.encryptedContent.dataKey);
 
-        if (certificateStore.isDataSignatureValid(decryptedKey, notification.encryptedContent.data, notification.encryptedContent.dataSignature)) {
-            final var decryptedData = certificateStore.getDecryptedData(decryptedKey, notification.encryptedContent.data);
+        if (certificateStore.isDataSignatureValid(decryptedKey, notification.encryptedContent.data,
+                notification.encryptedContent.dataSignature)) {
+            final var decryptedData = certificateStore.getDecryptedData(decryptedKey,
+                    notification.encryptedContent.data);
             final var serializer = new DefaultSerializer(new DefaultLogger());
             final var chatMessage = serializer.deserializeObject(decryptedData, ChatMessage.class);
-            socketIONamespace
-                .getRoomOperations(subscription.subscriptionId)
-                .sendEvent("notificationReceived", new NewChatMessageNotification(chatMessage));
+            socketIONamespace.getRoomOperations(subscription.subscriptionId)
+                    .sendEvent("notificationReceived", new NewChatMessageNotification(chatMessage));
         }
     }
 }

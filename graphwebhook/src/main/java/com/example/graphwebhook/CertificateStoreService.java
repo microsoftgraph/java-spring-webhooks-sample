@@ -36,8 +36,8 @@ public class CertificateStoreService {
 
     private Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private KeyStore getCertificateStore() throws KeyStoreException, NoSuchAlgorithmException,
-        CertificateException, IOException {
+    private KeyStore getCertificateStore()
+            throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
         var keystore = KeyStore.getInstance("JKS");
         keystore.load(new FileInputStream(storeName), storePassword.toCharArray());
         return keystore;
@@ -72,7 +72,8 @@ public class CertificateStoreService {
         }
     }
 
-    public boolean isDataSignatureValid(final byte[] encryptionKey, final String encryptedData, final String comparisonSignature) {
+    public boolean isDataSignatureValid(final byte[] encryptionKey, final String encryptedData,
+            final String comparisonSignature) {
         try {
             var decodedEncryptedData = Base64.decodeBase64(encryptedData);
             var mac = Mac.getInstance("HMACSHA256");

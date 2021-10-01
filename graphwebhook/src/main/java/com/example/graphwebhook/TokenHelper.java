@@ -20,19 +20,15 @@ public class TokenHelper {
     }
 
     public static boolean isValidationTokenValid(final String[] validAudiences,
-                                                 final String[] validTenantIds,
-                                                 final String serializedToken,
-                                                 final String keyDiscoveryUrl) {
+            final String[] validTenantIds, final String serializedToken,
+            final String keyDiscoveryUrl) {
         try {
             if (keyResolver == null) {
                 keyResolver = new JwkKeyResolver(keyDiscoveryUrl);
             }
 
-            var token = Jwts
-                .parserBuilder()
-                .setSigningKeyResolver(keyResolver)
-                .build()
-                .parseClaimsJws(serializedToken);
+            var token = Jwts.parserBuilder().setSigningKeyResolver(keyResolver).build()
+                    .parseClaimsJws(serializedToken);
 
             var body = token.getBody();
             var audience = body.getAudience();
@@ -56,11 +52,11 @@ public class TokenHelper {
     }
 
     public static boolean areValidationTokensValid(final String[] validAudiences,
-                                                   final String[] validTenantIds,
-                                                   final List<String> serializedTokens,
-                                                   final String keyDiscoveryUrl) {
+            final String[] validTenantIds, final List<String> serializedTokens,
+            final String keyDiscoveryUrl) {
         for (final String serializedToken : serializedTokens) {
-            if (!isValidationTokenValid(validAudiences, validTenantIds, serializedToken, keyDiscoveryUrl)) {
+            if (!isValidationTokenValid(validAudiences, validTenantIds, serializedToken,
+                    keyDiscoveryUrl)) {
                 return false;
             }
         }

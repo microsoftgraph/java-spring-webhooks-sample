@@ -23,9 +23,9 @@ public class JwkKeyResolver extends SigningKeyResolverAdapter {
     private final JwkProvider keyStore;
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    public JwkKeyResolver(final String keyDiscoveryUrl) throws URISyntaxException, MalformedURLException {
-        this.keyStore = new UrlJwkProvider(
-            new URI(keyDiscoveryUrl).toURL());
+    public JwkKeyResolver(final String keyDiscoveryUrl)
+            throws URISyntaxException, MalformedURLException {
+        this.keyStore = new UrlJwkProvider(new URI(keyDiscoveryUrl).toURL());
     }
 
     @Override

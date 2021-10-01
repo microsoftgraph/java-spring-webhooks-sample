@@ -47,20 +47,15 @@ public class WatchController {
     private String notificationHost;
 
     @GetMapping("/delegated")
-    public CompletableFuture<String> delegated(
-        Model model,
-        Authentication authentication,
-        RedirectAttributes redirectAttributes,
-        @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
+    public CompletableFuture<String> delegated(Model model, Authentication authentication,
+            RedirectAttributes redirectAttributes,
+            @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
         final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
         // Get the authenticated user's info
-        final var userFuture = graphClient
-            .me()
-            .buildRequest()
-            .select("displayName,mail,userPrincipalName")
-            .getAsync();
+        final var userFuture = graphClient.me().buildRequest()
+                .select("displayName,mail,userPrincipalName").getAsync();
 
         // Create the subscription
         final var subscriptionRequest = new Subscription();
@@ -71,10 +66,8 @@ public class WatchController {
         subscriptionRequest.includeResourceData = false;
         subscriptionRequest.expirationDateTime = OffsetDateTime.now().plusHours(1);
 
-        final var subscriptionFuture = graphClient
-            .subscriptions()
-            .buildRequest()
-            .postAsync(subscriptionRequest);
+        final var subscriptionFuture =
+                graphClient.subscriptions().buildRequest().postAsync(subscriptionRequest);
 
         return userFuture.thenCombine(subscriptionFuture, (user, subscription) -> {
             log.info("Created subscription {} for user {}", subscription.id, user.displayName);
@@ -83,7 +76,8 @@ public class WatchController {
             model.addAttribute("user", user);
             model.addAttribute("subscriptionId", subscription.id);
 
-            final var subscriptionJson = graphClient.getHttpProvider().getSerializer().serializeObject(subscription);
+            final var subscriptionJson =
+                    graphClient.getHttpProvider().getSerializer().serializeObject(subscription);
             model.addAttribute("subscription", subscriptionJson);
 
             // Add record in subscription store
@@ -101,10 +95,8 @@ public class WatchController {
     }
 
     @GetMapping("/apponly")
-    public CompletableFuture<String> apponly(
-        Model model,
-        RedirectAttributes redirectAttributes,
-        @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
+    public CompletableFuture<String> apponly(Model model, RedirectAttributes redirectAttributes,
+            @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
         final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
@@ -112,10 +104,7 @@ public class WatchController {
         // If we already had one, delete it so we can create a new one
         final var existingSubscriptions = subscriptionStore.getSubscriptionsForUser(APP_ONLY);
         for (final var sub : existingSubscriptions) {
-            graphClient
-                .subscriptions(sub.subscriptionId)
-                .buildRequest()
-                .delete();
+            graphClient.subscriptions(sub.subscriptionId).buildRequest().delete();
         }
 
         // Create the subscription
@@ -129,68 +118,60 @@ public class WatchController {
         subscriptionRequest.encryptionCertificate = certificateStore.getBase64EncodedCertificate();
         subscriptionRequest.encryptionCertificateId = certificateStore.getCertificateId();
 
-        return graphClient
-            .subscriptions()
-            .buildRequest()
-            .postAsync(subscriptionRequest)
-            .thenApply(subscription -> {
-                log.info("Created subscription {} for all Teams messages", subscription.id);
+        return graphClient.subscriptions().buildRequest().postAsync(subscriptionRequest)
+                .thenApply(subscription -> {
+                    log.info("Created subscription {} for all Teams messages", subscription.id);
 
-                model.addAttribute("subscriptionId", subscription.id);
+                    model.addAttribute("subscriptionId", subscription.id);
 
-                var subscriptionJson = graphClient.getHttpProvider().getSerializer().serializeObject(subscription);
-                model.addAttribute("subscription", subscriptionJson);
+                    var subscriptionJson = graphClient.getHttpProvider().getSerializer()
+                            .serializeObject(subscription);
+                    model.addAttribute("subscription", subscriptionJson);
 
-                // Add record in subscription store
-                subscriptionStore.addSubscription(subscription, APP_ONLY);
+                    // Add record in subscription store
+                    subscriptionStore.addSubscription(subscription, APP_ONLY);
 
-                model.addAttribute("success", "Subscription created.");
-                return "apponly";
-            }).exceptionally(e -> {
-                log.error(CREATE_SUBSCRIPTION_ERROR, e);
-                redirectAttributes.addFlashAttribute("error", CREATE_SUBSCRIPTION_ERROR);
-                redirectAttributes.addFlashAttribute("debug", e.getMessage());
-                return REDIRECT_HOME;
-            });
+                    model.addAttribute("success", "Subscription created.");
+                    return "apponly";
+                }).exceptionally(e -> {
+                    log.error(CREATE_SUBSCRIPTION_ERROR, e);
+                    redirectAttributes.addFlashAttribute("error", CREATE_SUBSCRIPTION_ERROR);
+                    redirectAttributes.addFlashAttribute("debug", e.getMessage());
+                    return REDIRECT_HOME;
+                });
     }
 
     @GetMapping("/unsubscribe")
     public CompletableFuture<String> unsubscribe(
-        @RequestParam(value = "subscriptionId") final String subscriptionId,
-        @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
+            @RequestParam(value = "subscriptionId") final String subscriptionId,
+            @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
         final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
-        return graphClient
-            .subscriptions(subscriptionId)
-            .buildRequest()
-            .deleteAsync()
-            .thenApply(sub -> {
-                // Remove subscription from store
-                subscriptionStore.deleteSubscription(subscriptionId);
+        return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
+                .thenApply(sub -> {
+                    // Remove subscription from store
+                    subscriptionStore.deleteSubscription(subscriptionId);
 
-                // Logout user
-                return REDIRECT_LOGOUT;
-            });
+                    // Logout user
+                    return REDIRECT_LOGOUT;
+                });
     }
 
     @GetMapping("/unsubscribeapponly")
     public CompletableFuture<String> unsubscribeapponly(
-        @RequestParam(value = "subscriptionId") final String subscriptionId,
-        @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
+            @RequestParam(value = "subscriptionId") final String subscriptionId,
+            @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
         final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
-        return graphClient
-            .subscriptions(subscriptionId)
-            .buildRequest()
-            .deleteAsync()
-            .thenApply(sub -> {
-                // Remove subscription from store
-                subscriptionStore.deleteSubscription(subscriptionId);
+        return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
+                .thenApply(sub -> {
+                    // Remove subscription from store
+                    subscriptionStore.deleteSubscription(subscriptionId);
 
-                // Logout user
-                return REDIRECT_HOME;
-            });
+                    // Logout user
+                    return REDIRECT_HOME;
+                });
     }
 }
