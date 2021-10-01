@@ -1,0 +1,34 @@
+{
+  "properties": [
+    {
+      "name": "azure.activedirectory.keydiscoveryurl",
+      "type": "java.lang.String",
+      "description": "The URL to the JWKS download for Azure"
+    },
+    {
+      "name": "app.protect.authenticated",
+      "type": "java.lang.String[]",
+      "description": "Limit these pages to authenticated users. Use '=/route1' for a single route. Use '=/route1, /route2' for multiple."
+    },
+    {
+      "name": "notifications.host",
+      "type": "java.lang.String",
+      "description": "The hostname of the server that will accept notifications. Use your ngrok proxy for local development."
+    },
+    {
+      "name": "certificate.storename",
+      "type": "java.lang.String",
+      "description": "The filename of the certifcate store that contains the certificate and key used to sign and decrypt"
+    },
+    {
+      "name": "certificate.storepass",
+      "type": "java.lang.String",
+      "description": "The password that protects the certificate store"
+    },
+    {
+      "name": "certificate.alias",
+      "type": "java.lang.String",
+      "description": "The alias of the certificate in the certifcate store"
+    }
+  ]
+}

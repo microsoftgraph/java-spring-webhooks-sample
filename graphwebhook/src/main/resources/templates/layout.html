@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+  <title>Microsoft Graph Notifications Sample</title>
+  <link rel="icon" href="/images/g-raph.png">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css"
+        integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU"
+        crossorigin="anonymous">
+  <link rel="stylesheet" href="/styles/site.css">
+</head>
+<body>
+  <main>
+    <div class="container py-4">
+      <header class="pb-3 mb-4 border-bottom">
+        <div class="d-flex align-items-center text-dark">
+          <img class="me-2" src="/images/g-raph.png" />
+          <span class="fs-4 flex-grow-1">Microsoft Graph Notifications Sample</span>
+        </div>
+      </header>
+      <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${success}">
+        <span th:text="${success}">It worked!</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <pre th:if="${debug}"><code text="${debug}">Here's more information</code></pre>
+      </div>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${error}">
+        <p th:text="${error}">It worked!</p>
+        <pre th:if="${debug}"><code text="${debug}">Here's more information</code></pre>
+      </div>
+      <div layout:fragment="content">
+          <p>Body contents</p>
+      </div>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
+          crossorigin="anonymous"></script>
+</body>
+</html>

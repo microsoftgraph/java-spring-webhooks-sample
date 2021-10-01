@@ -1,3 +1,12 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "cSpell.ignoreWords": [
+    "AADWSC",
+    "Jwts",
+    "gson",
+    "jjwt",
+    "jwks",
+    "socketio",
+    "ultraq"
+  ]
 }
