@@ -21,5 +21,5 @@ notifications:
 
 certificate:
   storename: JKSkeystore.jks
-  storepass: poiqwe1!
+  storepass: YOUR_KEYSTORE_PASSWORD_HERE
   alias: selfsignedjks
