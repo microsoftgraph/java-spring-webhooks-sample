@@ -8,12 +8,14 @@
   },
   "cSpell.ignoreWords": [
     "AADWSC",
+    "JKSkeystore",
     "Jwts",
     "codeql",
     "g-raph",
     "gson",
     "jjwt",
     "jwks",
+    "selfsignedjks",
     "socketio",
     "ultraq"
   ]
