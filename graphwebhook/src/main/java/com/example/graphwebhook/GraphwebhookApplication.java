@@ -13,6 +13,10 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class GraphwebhookApplication {
 
+
+    /**
+     * @return A configured SocketIO server instance
+     */
     @Bean
     public SocketIOServer socketIOServer() {
         var config = new Configuration();
@@ -21,6 +25,10 @@ public class GraphwebhookApplication {
         return new SocketIOServer(config);
     }
 
+
+    /**
+     * @param args command line arguments
+     */
     public static void main(String[] args) {
         SpringApplication.run(GraphwebhookApplication.class, args);
     }

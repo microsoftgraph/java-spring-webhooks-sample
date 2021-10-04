@@ -18,6 +18,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.SigningKeyResolverAdapter;
 
+/**
+ * Custom implementation of SigningKeyResolverAdapter that
+ * retrieves the signing key from the Microsoft identity platform's
+ * JWKS endpoint
+ */
 public class JwkKeyResolver extends SigningKeyResolverAdapter {
 
     private final JwkProvider keyStore;
@@ -28,6 +33,12 @@ public class JwkKeyResolver extends SigningKeyResolverAdapter {
         this.keyStore = new UrlJwkProvider(new URI(keyDiscoveryUrl).toURL());
     }
 
+
+    /**
+     * @param jwsHeader The header from a JSON web token containing the key ID
+     * @param claims claims from the JSON web token
+     * @return the signing key retrieved from the JWKS endpoint
+     */
     @Override
     @SuppressWarnings("all")
     public Key resolveSigningKey(final JwsHeader jwsHeader, final Claims claims) {

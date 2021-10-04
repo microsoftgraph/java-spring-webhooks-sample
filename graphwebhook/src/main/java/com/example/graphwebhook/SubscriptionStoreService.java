@@ -12,24 +12,51 @@ import com.microsoft.graph.models.Subscription;
 
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for recording all subscriptions created by the application
+ * This implementation is in-memory, so all records are lost if the app is restarted
+ */
 @Service
 public class SubscriptionStoreService {
 
     private static Map<String, SubscriptionRecord> subscriptions = new HashMap<>();
 
+
+    /**
+     * Adds a subscription to the store
+     * @param subscription the subscription to add
+     * @param userId the user's ID
+     */
     public void addSubscription(Subscription subscription, String userId) {
         var newRecord = new SubscriptionRecord(subscription.id, userId, subscription.clientState);
         subscriptions.put(subscription.id, newRecord);
     }
 
+
+    /**
+     * Get a subscription by ID
+     * @param id the ID of the subscription
+     * @return the subscription with the matching ID
+     */
     public SubscriptionRecord getSubscription(String id) {
         return subscriptions.get(id);
     }
 
+
+    /**
+     * Delete a subscription
+     * @param id the ID of the subscription
+     */
     public void deleteSubscription(String id) {
         subscriptions.remove(id);
     }
 
+
+    /**
+     * Get all subscriptions for a given user ID
+     * @param userId The user ID to match
+     * @return A list of subscriptions with the specified user ID
+     */
     public List<SubscriptionRecord> getSubscriptionsForUser(String userId) {
         final List<SubscriptionRecord> userSubscriptions = new ArrayList<>();
 

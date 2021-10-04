@@ -9,6 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+/**
+ * A CommandLineRunner that Spring will run on startup to
+ * start the SocketIO server
+ */
 @Component
 public class SocketIOServerRunner implements CommandLineRunner {
 

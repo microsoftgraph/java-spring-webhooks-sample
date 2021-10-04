@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class HomeController {
 
+
+    /**
+     * @return the template name to render
+     */
     @GetMapping("/")
     public String home() {
         return "home";

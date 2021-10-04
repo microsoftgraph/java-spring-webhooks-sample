@@ -57,6 +57,8 @@ public class ListenController {
 
     @Autowired
     public ListenController(SocketIOServer socketIOServer) {
+        // Set up a SocketIO server namespace to broadcast
+        // incoming notifications to clients (browser)
         socketIONamespace = socketIOServer.addNamespace("/emitNotification");
         socketIONamespace.addEventListener("create_room", String.class, new DataListener<String>() {
             @Override
@@ -69,6 +71,14 @@ public class ListenController {
         });
     }
 
+
+    /**
+     * <p>This method handles the initial
+     * <a href="https://docs.microsoft.com/graph/webhooks#notification-endpoint-validation">endpoint validation request sent</a>
+     * by Microsoft Graph when the subscription is created.
+     * @param validationToken A validation token provided as a query parameter
+     * @return a 200 OK response with the validationToken in the text/plain body
+     */
     @PostMapping(value = "/listen", headers = {"content-type=text/plain"})
     @ResponseBody
     public ResponseEntity<String> handleValidation(
@@ -76,9 +86,17 @@ public class ListenController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(validationToken);
     }
 
+
+    /**
+     * This method receives and processes incoming notifications from
+     * Microsoft Graph
+     * @param jsonPayload the JSON body of the request
+     * @return A 202 Accepted response
+     */
     @PostMapping("/listen")
     public CompletableFuture<ResponseEntity<String>> handleNotification(
             @RequestBody final String jsonPayload) {
+        // Deserialize the JSON body into a ChangeNotificationCollection
         final var serializer = new DefaultSerializer(new DefaultLogger());
         final var notifications =
                 serializer.deserializeObject(jsonPayload, ChangeNotificationCollection.class);
@@ -96,11 +114,17 @@ public class ListenController {
                 var subscription =
                         subscriptionStore.getSubscription(notification.subscriptionId.toString());
 
+                // Only process if we know about this subscription AND
+                // the client state in the notification matches
                 if (subscription != null
                         && subscription.clientState.equals(notification.clientState)) {
                     if (notification.encryptedContent == null) {
+                        // No encrypted content, this is a new message notification
+                        // without resource data
                         processNewMessageNotification(notification, subscription);
                     } else {
+                        // With encrypted content, this is a new channel message
+                        // notification with encrypted resource data
                         processNewChannelMessageNotification(notification, subscription);
                     }
                 }
@@ -110,13 +134,26 @@ public class ListenController {
         return CompletableFuture.completedFuture(ResponseEntity.accepted().body(""));
     }
 
+
+    /**
+     * Processes a new message notification by getting the message from
+     * Microsoft Graph
+     * @param notification the new message notification
+     * @param subscription the matching subscription record
+     */
     private void processNewMessageNotification(final ChangeNotification notification,
             final SubscriptionRecord subscription) {
+        // Get the authorized OAuth2 client for the relevant user
+        // This allows the service to access the user's mailbox with delegated auth
         final var oauthClient =
                 authorizedClientService.loadAuthorizedClient("graph", subscription.userId);
 
         final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
+        // The notification contains the relative URL to the message
+        // so use the customRequest method instead of the fluent API
+        // Once message has been retrieved, send the information via SocketIO
+        // to subscribed clients
         graphClient.customRequest("/" + notification.resource, Message.class).buildRequest()
                 .getAsync()
                 .thenAccept(message -> socketIONamespace
@@ -124,17 +161,29 @@ public class ListenController {
                         .sendEvent("notificationReceived", new NewMessageNotification(message)));
     }
 
+
+    /**
+     * Processes a new channel message notification by decrypting the included
+     * resource data
+     * @param notification the new channel message notification
+     * @param subscription the matching subscription record
+     */
     private void processNewChannelMessageNotification(final ChangeNotification notification,
             final SubscriptionRecord subscription) {
+        // Decrypt the encrypted key from the notification
         final var decryptedKey =
                 certificateStore.getEncryptionKey(notification.encryptedContent.dataKey);
 
+        // Validate the signature
         if (certificateStore.isDataSignatureValid(decryptedKey, notification.encryptedContent.data,
                 notification.encryptedContent.dataSignature)) {
+            // Decrypt the data using the decrypted key
             final var decryptedData = certificateStore.getDecryptedData(decryptedKey,
                     notification.encryptedContent.data);
+            // Deserialize the decrypted JSON into a ChatMessage
             final var serializer = new DefaultSerializer(new DefaultLogger());
             final var chatMessage = serializer.deserializeObject(decryptedData, ChatMessage.class);
+            // Send the information to subscribed clients
             socketIONamespace.getRoomOperations(subscription.subscriptionId)
                     .sendEvent("notificationReceived", new NewChatMessageNotification(chatMessage));
         }

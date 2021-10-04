@@ -22,6 +22,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for certificate operations:
+ * - getting the certificate
+ * - validating signatures
+ * - decrypting content
+ */
 @Service
 public class CertificateStoreService {
 
@@ -36,6 +42,14 @@ public class CertificateStoreService {
 
     private Logger log = LoggerFactory.getLogger(this.getClass());
 
+
+    /**
+     * @return the KeyStore specified in application.yml
+     * @throws KeyStoreException
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException
+     * @throws IOException
+     */
     private KeyStore getCertificateStore()
             throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
         var keystore = KeyStore.getInstance("JKS");
@@ -43,6 +57,10 @@ public class CertificateStoreService {
         return keystore;
     }
 
+
+    /**
+     * @return the certificate specified in application.yml encoded in base64
+     */
     public String getBase64EncodedCertificate() {
         try {
             var keystore = getCertificateStore();
@@ -54,10 +72,19 @@ public class CertificateStoreService {
         }
     }
 
+
+    /**
+     * @return the certificate ID or alias specified in application.yml
+     */
     public String getCertificateId() {
         return alias;
     }
 
+
+    /**
+     * @param base64encodedSymmetricKey the base64-encoded symmetric key to be decrypted
+     * @return the decrypted symmetric key
+     */
     public byte[] getEncryptionKey(final String base64encodedSymmetricKey) {
         try {
             var keystore = getCertificateStore();
@@ -72,6 +99,13 @@ public class CertificateStoreService {
         }
     }
 
+
+    /**
+     * @param encryptionKey the symmetric key that was used to sign the encrypted data
+     * @param encryptedData the signed encrypted data to validate
+     * @param comparisonSignature the expected signature
+     * @return true if the signature is valid, false if not
+     */
     public boolean isDataSignatureValid(final byte[] encryptionKey, final String encryptedData,
             final String comparisonSignature) {
         try {
@@ -88,6 +122,12 @@ public class CertificateStoreService {
         }
     }
 
+
+    /**
+     * @param encryptionKey the encryption key to use to decrypt the data
+     * @param encryptedData the encrypted data
+     * @return the decrypted data
+     */
     public String getDecryptedData(final byte[] encryptionKey, final String encryptedData) {
         try {
             var secretKey = new SecretKeySpec(encryptionKey, "AES");

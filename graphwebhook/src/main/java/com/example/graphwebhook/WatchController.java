@@ -46,6 +46,16 @@ public class WatchController {
     @Value("${notifications.host}")
     private String notificationHost;
 
+
+    /**
+     * The delegated auth page of the app. This will subscribe for the authenticated user's
+     * inbox on Exchange Online
+     * @param model the model provided by Spring
+     * @param authentication authentication information for the request
+     * @param redirectAttributes redirect attributes provided by Spring
+     * @param oauthClient a delegated auth OAuth2 client for the authenticated user
+     * @return the name of the template used to render the response
+     */
     @GetMapping("/delegated")
     public CompletableFuture<String> delegated(Model model, Authentication authentication,
             RedirectAttributes redirectAttributes,
@@ -72,7 +82,10 @@ public class WatchController {
         return userFuture.thenCombine(subscriptionFuture, (user, subscription) -> {
             log.info("Created subscription {} for user {}", subscription.id, user.displayName);
 
+            // Save the authorized client so we can use it later from the notification controller
             authorizedClientService.saveAuthorizedClient(oauthClient, authentication);
+
+            // Add information to the model
             model.addAttribute("user", user);
             model.addAttribute("subscriptionId", subscription.id);
 
@@ -94,6 +107,14 @@ public class WatchController {
         });
     }
 
+
+    /** The app-only auth page of the app. This will subscribe for notifications on all new
+     * Teams channel messages
+     * @param model the model provided by Spring
+     * @param redirectAttributes redirect attributes provided by Spring
+     * @param oauthClient an app-only auth OAuth2 client
+     * @return the name of the template used to render the response
+     */
     @GetMapping("/apponly")
     public CompletableFuture<String> apponly(Model model, RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
@@ -122,6 +143,7 @@ public class WatchController {
                 .thenApply(subscription -> {
                     log.info("Created subscription {} for all Teams messages", subscription.id);
 
+                    // Add information to the model
                     model.addAttribute("subscriptionId", subscription.id);
 
                     var subscriptionJson = graphClient.getHttpProvider().getSerializer()
@@ -141,6 +163,13 @@ public class WatchController {
                 });
     }
 
+
+    /**
+     * Deletes a subscription and logs the user out
+     * @param subscriptionId the subscription ID to delete
+     * @param oauthClient a delegated auth OAuth2 client for the authenticated user
+     * @return a redirect to the logout page
+     */
     @GetMapping("/unsubscribe")
     public CompletableFuture<String> unsubscribe(
             @RequestParam(value = "subscriptionId") final String subscriptionId,
@@ -158,6 +187,13 @@ public class WatchController {
                 });
     }
 
+
+    /**
+     * Deletes an app-only subscription
+     * @param subscriptionId the subscription ID to delete
+     * @param oauthClient an app-only auth OAuth2 client
+     * @return a redirect to the home page
+     */
     @GetMapping("/unsubscribeapponly")
     public CompletableFuture<String> unsubscribeapponly(
             @RequestParam(value = "subscriptionId") final String subscriptionId,
