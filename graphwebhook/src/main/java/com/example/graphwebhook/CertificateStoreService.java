@@ -18,6 +18,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.tomcat.util.codec.binary.Base64;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +45,11 @@ public class CertificateStoreService {
     private Logger log = LoggerFactory.getLogger(this.getClass());
 
 
+    public CertificateStoreService() {
+        // Add the BouncyCastle provider for
+        // RSA/None/OAEPWithSHA1AndMGF1Padding cipher support
+        Security.addProvider(new BouncyCastleProvider());
+    }
     /**
      * @return the KeyStore specified in application.yml
      * @throws KeyStoreException
@@ -91,7 +97,7 @@ public class CertificateStoreService {
             var keystore = getCertificateStore();
             var asymmetricKey = keystore.getKey(alias, storePassword.toCharArray());
             var encryptedSymmetricKey = Base64.decodeBase64(base64encodedSymmetricKey);
-            var cipher = Cipher.getInstance("RSA/None/OAEPWithSHA-1AndMGF1Padding");
+            var cipher = Cipher.getInstance("RSA/None/OAEPWithSHA1AndMGF1Padding");
             cipher.init(Cipher.DECRYPT_MODE, asymmetricKey);
             return cipher.doFinal(encryptedSymmetricKey);
         } catch (final Exception e) {
