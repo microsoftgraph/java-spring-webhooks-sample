@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
 
@@ -90,7 +91,7 @@ public class CertificateStoreService {
             var keystore = getCertificateStore();
             var asymmetricKey = keystore.getKey(alias, storePassword.toCharArray());
             var encryptedSymmetricKey = Base64.decodeBase64(base64encodedSymmetricKey);
-            var cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA1AndMGF1Padding");
+            var cipher = Cipher.getInstance("RSA/None/OAEPWithSHA-1AndMGF1Padding");
             cipher.init(Cipher.DECRYPT_MODE, asymmetricKey);
             return cipher.doFinal(encryptedSymmetricKey);
         } catch (final Exception e) {
