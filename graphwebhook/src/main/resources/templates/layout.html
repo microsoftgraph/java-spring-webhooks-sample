@@ -21,11 +21,11 @@
       <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${success}">
         <span th:text="${success}">It worked!</span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        <pre th:if="${debug}"><code text="${debug}">Here's more information</code></pre>
+        <pre th:if="${debug}"><code th:text="${debug}">Here's more information</code></pre>
       </div>
       <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${error}">
         <p th:text="${error}">It worked!</p>
-        <pre th:if="${debug}"><code text="${debug}">Here's more information</code></pre>
+        <pre th:if="${debug}"><code th:text="${debug}">Here's more information</code></pre>
       </div>
       <div layout:fragment="content">
         <p>Body contents</p>
