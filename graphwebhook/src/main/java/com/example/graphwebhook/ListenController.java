@@ -52,7 +52,7 @@ public class ListenController {
     @Value("${azure.activedirectory.tenant-id}")
     private String tenantId;
 
-    @Value("${azure.activedirectory.keydiscoveryurl")
+    @Value("${azure.activedirectory.keydiscoveryurl}")
     private String keyDiscoveryUrl;
 
     @Autowired
