@@ -17,3 +17,4 @@ README.html
 *.iml
 .idea
 *.jks
+application.yml

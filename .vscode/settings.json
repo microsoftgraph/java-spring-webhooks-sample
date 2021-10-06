@@ -1,3 +1,24 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  "java.format.enabled": true,
+  "[java]": {
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.defaultFormatter": "redhat.java"
+  },
+  "cSpell.ignoreWords": [
+    "AADWSC",
+    "JKSkeystore",
+    "Jwts",
+    "MSRC",
+    "bcpkix",
+    "codeql",
+    "g-raph",
+    "gson",
+    "jjwt",
+    "jwks",
+    "selfsignedjks",
+    "socketio",
+    "ultraq"
+  ]
 }
