@@ -11,7 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
-
+import java.util.Objects;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.IvParameterSpec;
@@ -22,12 +22,11 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 /**
- * Service responsible for certificate operations:
- * - getting the certificate
- * - validating signatures
+ * Service responsible for certificate operations: - getting the certificate - validating signatures
  * - decrypting content
  */
 @Service
@@ -50,6 +49,7 @@ public class CertificateStoreService {
         // RSA/None/OAEPWithSHA1AndMGF1Padding cipher support
         Security.addProvider(new BouncyCastleProvider());
     }
+
     /**
      * @return the KeyStore specified in application.yml
      * @throws KeyStoreException
@@ -92,11 +92,12 @@ public class CertificateStoreService {
      * @param base64encodedSymmetricKey the base64-encoded symmetric key to be decrypted
      * @return the decrypted symmetric key
      */
-    public byte[] getEncryptionKey(final String base64encodedSymmetricKey) {
+    public byte[] getEncryptionKey(@NonNull final String base64encodedSymmetricKey) {
+        Objects.requireNonNull(base64encodedSymmetricKey);
         try {
+            var encryptedSymmetricKey = Base64.decodeBase64(base64encodedSymmetricKey);
             var keystore = getCertificateStore();
             var asymmetricKey = keystore.getKey(alias, storePassword.toCharArray());
-            var encryptedSymmetricKey = Base64.decodeBase64(base64encodedSymmetricKey);
             var cipher = Cipher.getInstance("RSA/None/OAEPWithSHA1AndMGF1Padding");
             cipher.init(Cipher.DECRYPT_MODE, asymmetricKey);
             return cipher.doFinal(encryptedSymmetricKey);
@@ -113,8 +114,11 @@ public class CertificateStoreService {
      * @param comparisonSignature the expected signature
      * @return true if the signature is valid, false if not
      */
-    public boolean isDataSignatureValid(final byte[] encryptionKey, final String encryptedData,
-            final String comparisonSignature) {
+    public boolean isDataSignatureValid(@NonNull final byte[] encryptionKey,
+            @NonNull final String encryptedData, @NonNull final String comparisonSignature) {
+        Objects.requireNonNull(encryptionKey);
+        Objects.requireNonNull(comparisonSignature);
+        Objects.requireNonNull(encryptedData);
         try {
             var decodedEncryptedData = Base64.decodeBase64(encryptedData);
             var mac = Mac.getInstance("HMACSHA256");
@@ -135,7 +139,10 @@ public class CertificateStoreService {
      * @param encryptedData the encrypted data
      * @return the decrypted data
      */
-    public String getDecryptedData(final byte[] encryptionKey, final String encryptedData) {
+    public String getDecryptedData(@NonNull final byte[] encryptionKey,
+            @NonNull final String encryptedData) {
+        Objects.requireNonNull(encryptedData);
+        Objects.requireNonNull(encryptionKey);
         try {
             var secretKey = new SecretKeySpec(encryptionKey, "AES");
             var ivBytes = Arrays.copyOf(encryptionKey, 16);

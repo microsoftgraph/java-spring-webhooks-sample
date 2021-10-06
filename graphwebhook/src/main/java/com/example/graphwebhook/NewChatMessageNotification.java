@@ -3,7 +3,9 @@
 
 package com.example.graphwebhook;
 
+import java.util.Objects;
 import com.microsoft.graph.models.ChatMessage;
+import org.springframework.lang.NonNull;
 
 /**
  * Represents the information sent via SocketIO to subscribed
@@ -22,7 +24,8 @@ public class NewChatMessageNotification {
      */
     public final String body;
 
-    public NewChatMessageNotification(ChatMessage message) {
+    public NewChatMessageNotification(@NonNull ChatMessage message) {
+        Objects.requireNonNull(message);
         sender = message.from.user.displayName;
         body = message.body.content;
     }

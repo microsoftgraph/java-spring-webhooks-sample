@@ -3,6 +3,7 @@
 
 package com.example.graphwebhook;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import com.corundumstudio.socketio.AckRequest;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -73,9 +75,11 @@ public class ListenController {
 
 
     /**
-     * <p>This method handles the initial
-     * <a href="https://docs.microsoft.com/graph/webhooks#notification-endpoint-validation">endpoint validation request sent</a>
-     * by Microsoft Graph when the subscription is created.
+     * <p>
+     * This method handles the initial
+     * <a href="https://docs.microsoft.com/graph/webhooks#notification-endpoint-validation">endpoint
+     * validation request sent</a> by Microsoft Graph when the subscription is created.
+     *
      * @param validationToken A validation token provided as a query parameter
      * @return a 200 OK response with the validationToken in the text/plain body
      */
@@ -88,8 +92,8 @@ public class ListenController {
 
 
     /**
-     * This method receives and processes incoming notifications from
-     * Microsoft Graph
+     * This method receives and processes incoming notifications from Microsoft Graph
+     *
      * @param jsonPayload the JSON body of the request
      * @return A 202 Accepted response
      */
@@ -136,13 +140,16 @@ public class ListenController {
 
 
     /**
-     * Processes a new message notification by getting the message from
-     * Microsoft Graph
+     * Processes a new message notification by getting the message from Microsoft Graph
+     *
      * @param notification the new message notification
      * @param subscription the matching subscription record
      */
-    private void processNewMessageNotification(final ChangeNotification notification,
-            final SubscriptionRecord subscription) {
+    private void processNewMessageNotification(@NonNull final ChangeNotification notification,
+            @NonNull final SubscriptionRecord subscription) {
+        Objects.requireNonNull(notification);
+        Objects.requireNonNull(subscription);
+
         // Get the authorized OAuth2 client for the relevant user
         // This allows the service to access the user's mailbox with delegated auth
         final var oauthClient =
@@ -163,13 +170,17 @@ public class ListenController {
 
 
     /**
-     * Processes a new channel message notification by decrypting the included
-     * resource data
+     * Processes a new channel message notification by decrypting the included resource data
+     *
      * @param notification the new channel message notification
      * @param subscription the matching subscription record
      */
-    private void processNewChannelMessageNotification(final ChangeNotification notification,
-            final SubscriptionRecord subscription) {
+    private void processNewChannelMessageNotification(
+            @NonNull final ChangeNotification notification,
+            @NonNull final SubscriptionRecord subscription) {
+        Objects.requireNonNull(notification);
+        Objects.requireNonNull(subscription);
+
         // Decrypt the encrypted key from the notification
         final var decryptedKey =
                 certificateStore.getEncryptionKey(notification.encryptedContent.dataKey);

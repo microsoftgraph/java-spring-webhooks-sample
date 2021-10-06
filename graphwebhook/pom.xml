@@ -14,7 +14,7 @@
 	<name>graphwebhook</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
-		<java.version>14</java.version>
+		<java.version>17</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -56,7 +56,7 @@
 		<dependency>
 			<groupId>com.microsoft.graph</groupId>
 			<artifactId>microsoft-graph</artifactId>
-			<version>5.2.0</version>
+			<version>5.4.0</version>
 		</dependency>
 
 		<dependency>

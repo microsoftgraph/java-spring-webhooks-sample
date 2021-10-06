@@ -3,7 +3,9 @@
 
 package com.example.graphwebhook;
 
+import java.util.Objects;
 import com.microsoft.graph.models.Message;
+import org.springframework.lang.NonNull;
 
 /**
  * Represents the information sent via SocketIO to subscribed
@@ -21,7 +23,8 @@ public class NewMessageNotification {
      */
     public final String id;
 
-    public NewMessageNotification(Message message) {
+    public NewMessageNotification(@NonNull Message message) {
+        Objects.requireNonNull(message);
         subject = message.subject;
         id = message.id;
     }
