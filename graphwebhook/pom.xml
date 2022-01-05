@@ -15,7 +15,6 @@
 	<description>Demo project for Spring Boot</description>
 	<properties>
 		<java.version>17</java.version>
-		<log4j2.version>2.15.0</log4j2.version><!-- TODO remove when spring-boot-starter-parent is upgraded to 2.6.2 or above https://spring.io/blog/2021/12/10/log4j2-vulnerability-and-spring-boot -->
 	</properties>
 	<dependencies>
 		<dependency>
