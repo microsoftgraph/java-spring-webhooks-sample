@@ -57,7 +57,7 @@
 		<dependency>
 			<groupId>com.microsoft.graph</groupId>
 			<artifactId>microsoft-graph</artifactId>
-			<version>5.8.0</version>
+			<version>5.9.0</version>
 		</dependency>
 
 		<dependency>
