@@ -1,7 +1,5 @@
 ---
 page_type: sample
-products:
-- ms-graph
 languages:
 - java
 products:
