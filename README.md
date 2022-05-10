@@ -6,17 +6,24 @@ languages:
 - java
 products:
 - ms-graph
-- office-exchange-server
+- microsoft-graph-mail-api
+- microsoft-graph-teamwork-api
+- office-exchange-online
 - azure-active-directory
 - office-teams
-description: "Create Microsoft Graph webhook subscriptions for a Java Spring app, so that it can receive notifications of changes for any resource. This sample also supports receiving change notifications with data, validating and decrypting the payload."
+description: Create Microsoft Graph webhook subscriptions for a Java Spring app, so that it can receive notifications of changes for any resource. This sample also supports receiving change notifications with data, validating and decrypting the payload.
 extensions:
   contentType: samples
   technologies:
   - Microsoft Graph
+  services:
+  - Microsoft Teams
+  - Azure AD
+  - Office 365
+  - Change notifications
   createdDate: 3/15/2020 4:12:18 PM
 ---
-# Sample Application - Microsoft Graph Change Notifications with Resource Data
+# Microsoft Graph Change Notifications Sample for Java Spring
 
 ![Java CI with Maven](https://github.com/microsoftgraph/java-spring-webhooks-sample/workflows/Java%20CI%20with%20Maven/badge.svg?branch=main)
 
