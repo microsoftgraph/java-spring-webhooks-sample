@@ -89,9 +89,11 @@ public class TokenHelper {
             @NonNull final String[] validTenantIds, @NonNull final List<String> serializedTokens,
             @NonNull final String keyDiscoveryUrl) {
         for (final String serializedToken : serializedTokens) {
-            if (!isValidationTokenValid(Objects.requireNonNull(validAudiences),
-                    Objects.requireNonNull(validTenantIds), Objects.requireNonNull(serializedToken),
-                    Objects.requireNonNull(keyDiscoveryUrl))) {
+            Objects.requireNonNull(validAudiences);
+            Objects.requireNonNull(validTenantIds);
+            Objects.requireNonNull(serializedToken);
+            Objects.requireNonNull(keyDiscoveryUrl);
+            if (!isValidationTokenValid(validAudiences, validTenantIds, serializedToken, keyDiscoveryUrl)) {
                 return false;
             }
         }

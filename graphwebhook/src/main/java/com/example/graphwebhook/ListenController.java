@@ -48,16 +48,15 @@ public class ListenController {
 
     private SocketIONamespace socketIONamespace;
 
-    @Value("${azure.activedirectory.client-id}")
+    @Value("${spring.cloud.azure.active-directory.credential.client-id}")
     private String clientId;
 
-    @Value("${azure.activedirectory.tenant-id}")
+    @Value("${spring.cloud.azure.active-directory.profile.tenant-id}")
     private String tenantId;
 
-    @Value("${azure.activedirectory.keydiscoveryurl}")
+    @Value("${spring.cloud.azure.active-directory.keydiscoveryurl}")
     private String keyDiscoveryUrl;
 
-    @Autowired
     public ListenController(SocketIOServer socketIOServer) {
         // Set up a SocketIO server namespace to broadcast
         // incoming notifications to clients (browser)
@@ -71,6 +70,8 @@ public class ListenController {
                 client.joinRoom(roomName);
             }
         });
+
+        //keyDiscoveryUrl = Objects.requireNonNull(keyDiscoveryUrl);
     }
 
 

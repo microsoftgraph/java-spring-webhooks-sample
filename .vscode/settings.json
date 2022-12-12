@@ -20,5 +20,13 @@
     "selfsignedjks",
     "socketio",
     "ultraq"
+  ],
+  "java.compile.nullAnalysis.mode": "automatic",
+  "cSpell.words": [
+    "activedirectory",
+    "autoconfigure",
+    "Configurer",
+    "graphwebhook",
+    "keydiscoveryurl"
   ]
 }

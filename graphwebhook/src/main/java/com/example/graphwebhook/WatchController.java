@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,7 +47,6 @@ public class WatchController {
     @Value("${notifications.host}")
     private String notificationHost;
 
-
     /**
      * The delegated auth page of the app. This will subscribe for the authenticated user's
      * inbox on Exchange Online
@@ -57,13 +57,14 @@ public class WatchController {
      * @return the name of the template used to render the response
      */
     @GetMapping("/delegated")
-    public CompletableFuture<String> delegated(Model model, Authentication authentication,
+    public CompletableFuture<String> delegated(Model model, OAuth2AuthenticationToken authentication,
             RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
+        //final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
 
         // Get the authenticated user's info
+        /*
         final var userFuture = graphClient.me().buildRequest()
                 .select("displayName,mail,userPrincipalName").getAsync();
 
@@ -105,6 +106,8 @@ public class WatchController {
             redirectAttributes.addFlashAttribute("debug", e.getMessage());
             return REDIRECT_HOME;
         });
+        */
+        return CompletableFuture.completedFuture("delegated");
     }
 
 

@@ -28,7 +28,8 @@ public class GraphClientHelper {
      */
     public static GraphServiceClient<Request> getGraphClient(
             @NonNull final OAuth2AuthorizedClient oauthClient) {
-        final var authProvider = new SpringOAuth2AuthProvider(Objects.requireNonNull(oauthClient));
+        Objects.requireNonNull(oauthClient);
+        final var authProvider = new SpringOAuth2AuthProvider(oauthClient);
 
         final var logger = new DefaultLogger();
         logger.setLoggingLevel(LoggerLevel.ERROR);
