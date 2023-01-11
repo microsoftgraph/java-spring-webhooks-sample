@@ -25,28 +25,15 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.apply(aadWebApplication())
                 .and()
+            .securityContext().requireExplicitSave(false)
+                .and()
             .csrf()
                 .ignoringRequestMatchers("/listen")
                 .and()
             .authorizeHttpRequests()
-                //.requestMatchers("/", "/login", "/listen").permitAll()
-                //.anyRequest().authenticated();
                 .requestMatchers(protectedRoutes).authenticated()
-                .requestMatchers("/**").permitAll();
+                .anyRequest().permitAll();
 
         return http.build();
     }
-    /*
-
-
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
-        // Configure security from AADWebSecurityConfigurerAdapter
-        super.configure(http);
-        // Add protected routes
-        http.csrf().ignoringAntMatchers("/listen").and().authorizeRequests()
-                // These routes require an authenticated user
-                .antMatchers(protectedRoutes).authenticated().antMatchers("/**").permitAll();
-    }
-    */
 }

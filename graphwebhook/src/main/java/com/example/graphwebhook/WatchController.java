@@ -6,6 +6,7 @@ package com.example.graphwebhook;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 
 import com.microsoft.graph.models.ChangeType;
 import com.microsoft.graph.models.Subscription;
@@ -14,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
@@ -61,10 +61,9 @@ public class WatchController {
             RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
-        //final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
+        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         // Get the authenticated user's info
-        /*
         final var userFuture = graphClient.me().buildRequest()
                 .select("displayName,mail,userPrincipalName").getAsync();
 
@@ -95,7 +94,8 @@ public class WatchController {
             model.addAttribute("subscription", subscriptionJson);
 
             // Add record in subscription store
-            subscriptionStore.addSubscription(subscription, authentication.getName());
+            subscriptionStore.addSubscription(subscription,
+                Objects.requireNonNull(authentication.getName()));
 
             model.addAttribute("success", "Subscription created.");
 
@@ -106,8 +106,6 @@ public class WatchController {
             redirectAttributes.addFlashAttribute("debug", e.getMessage());
             return REDIRECT_HOME;
         });
-        */
-        return CompletableFuture.completedFuture("delegated");
     }
 
 
@@ -122,7 +120,7 @@ public class WatchController {
     public CompletableFuture<String> apponly(Model model, RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
+        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         // Apps are only allowed one subscription to the /teams/getAllMessages resource
         // If we already had one, delete it so we can create a new one
@@ -178,12 +176,12 @@ public class WatchController {
             @RequestParam(value = "subscriptionId") final String subscriptionId,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
+        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
                 .thenApply(sub -> {
                     // Remove subscription from store
-                    subscriptionStore.deleteSubscription(subscriptionId);
+                    subscriptionStore.deleteSubscription(Objects.requireNonNull(subscriptionId));
 
                     // Logout user
                     return REDIRECT_LOGOUT;
@@ -202,12 +200,12 @@ public class WatchController {
             @RequestParam(value = "subscriptionId") final String subscriptionId,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(oauthClient);
+        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
                 .thenApply(sub -> {
                     // Remove subscription from store
-                    subscriptionStore.deleteSubscription(subscriptionId);
+                    subscriptionStore.deleteSubscription(Objects.requireNonNull(subscriptionId));
 
                     // Logout user
                     return REDIRECT_HOME;

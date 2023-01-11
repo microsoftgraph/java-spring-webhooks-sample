@@ -24,9 +24,21 @@
   "java.compile.nullAnalysis.mode": "automatic",
   "cSpell.words": [
     "activedirectory",
+    "apponly",
     "autoconfigure",
     "Configurer",
+    "genkey",
     "graphwebhook",
-    "keydiscoveryurl"
+    "HMACSHA",
+    "keyalg",
+    "keydiscoveryurl",
+    "keysize",
+    "keytool",
+    "mailfolders",
+    "OAEP",
+    "PKCS",
+    "storename",
+    "storepass",
+    "unsubscribeapponly"
   ]
 }

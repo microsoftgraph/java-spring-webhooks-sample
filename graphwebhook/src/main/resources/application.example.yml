@@ -1,16 +1,21 @@
-azure:
-  activedirectory:
-    keydiscoveryurl: https://login.microsoftonline.com/common/discovery/keys
-    tenant-id: YOUR_TENANT_ID_HERE
-    client-id: YOUR_CLIENT_ID_HERE
-    client-secret: 'YOUR_CLIENT_SECRET_HERE'
-    post-logout-redirect-uri: http://localhost:8080
-    authorization-clients:
-      graph:
-        scopes: user.read, mail.read
-      apponly:
-        authorization-grant-type: client-credentials
-        scopes: https://graph.microsoft.com/.default
+spring:
+  cloud:
+    azure:
+      active-directory:
+        enabled: true
+        keydiscoveryurl: https://login.microsoftonline.com/common/discovery/keys
+        profile:
+          tenant-id: YOUR_TENANT_ID_HERE
+        credential:
+          client-id: YOUR_CLIENT_ID_HERE
+          client-secret: 'YOUR_CLIENT_SECRET_HERE'
+        post-logout-redirect-uri: http://localhost:8080
+        authorization-clients:
+          graph:
+            scopes: user.read, mail.read
+          apponly:
+            authorization-grant-type: client_credentials
+            scopes: https://graph.microsoft.com/.default
 
 app:
   protect:
