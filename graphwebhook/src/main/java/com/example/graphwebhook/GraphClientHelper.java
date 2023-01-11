@@ -3,7 +3,6 @@
 
 package com.example.graphwebhook;
 
-import java.util.Objects;
 import com.microsoft.graph.logger.DefaultLogger;
 import com.microsoft.graph.logger.LoggerLevel;
 import com.microsoft.graph.requests.GraphServiceClient;
@@ -28,7 +27,6 @@ public class GraphClientHelper {
      */
     public static GraphServiceClient<Request> getGraphClient(
             @NonNull final OAuth2AuthorizedClient oauthClient) {
-        Objects.requireNonNull(oauthClient);
         final var authProvider = new SpringOAuth2AuthProvider(oauthClient);
 
         final var logger = new DefaultLogger();
