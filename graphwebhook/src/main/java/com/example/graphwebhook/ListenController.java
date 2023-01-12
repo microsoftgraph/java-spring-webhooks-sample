@@ -118,7 +118,7 @@ public class ListenController {
                 // Look up subscription in store
                 var subscription =
                         subscriptionStore.getSubscription(
-                            Objects.requireNonNull(notification.subscriptionId.toString()));
+                                Objects.requireNonNull(notification.subscriptionId.toString()));
 
                 // Only process if we know about this subscription AND
                 // the client state in the notification matches
