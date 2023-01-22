@@ -72,7 +72,7 @@ public class CertificateStoreService {
         try {
             var keystore = getCertificateStore();
             var certificate = keystore.getCertificate(alias);
-            return new String(Base64.encodeBase64(certificate.getEncoded()));
+            return new String(Base64.encodeBase64String(certificate.getEncoded()));
         } catch (final Exception e) {
             log.error("Error getting Base64 encoded certificate", e);
             return null;
@@ -125,7 +125,7 @@ public class CertificateStoreService {
             var secretKey = new SecretKeySpec(encryptionKey, "HMACSHA256");
             mac.init(secretKey);
             var hashedData = mac.doFinal(decodedEncryptedData);
-            var encodedHashedData = new String(Base64.encodeBase64(hashedData));
+            var encodedHashedData = new String(Base64.encodeBase64String(hashedData));
             return comparisonSignature.equals(encodedHashedData);
         } catch (final Exception e) {
             log.error("Error validating signature", e);

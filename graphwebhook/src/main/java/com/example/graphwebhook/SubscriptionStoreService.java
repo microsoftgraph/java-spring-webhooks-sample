@@ -30,9 +30,9 @@ public class SubscriptionStoreService {
      */
     public void addSubscription(@NonNull final Subscription subscription,
             @NonNull final String userId) {
-        Objects.requireNonNull(subscription);
-        var newRecord = new SubscriptionRecord(subscription.id, Objects.requireNonNull(userId),
-                subscription.clientState);
+        var newRecord = new SubscriptionRecord(Objects.requireNonNull(subscription.id),
+            Objects.requireNonNull(userId),
+            Objects.requireNonNull(subscription.clientState));
         subscriptions.put(subscription.id, newRecord);
     }
 
@@ -65,7 +65,6 @@ public class SubscriptionStoreService {
      * @return A list of subscriptions with the specified user ID
      */
     public List<SubscriptionRecord> getSubscriptionsForUser(@NonNull final String userId) {
-        Objects.requireNonNull(userId);
         final List<SubscriptionRecord> userSubscriptions = new ArrayList<>();
 
         subscriptions.forEach((id, subscription) -> {

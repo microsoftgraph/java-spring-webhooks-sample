@@ -36,10 +36,6 @@ public class TokenHelper {
     public static boolean isValidationTokenValid(@NonNull final String[] validAudiences,
             @NonNull final String[] validTenantIds, @NonNull final String serializedToken,
             @NonNull final String keyDiscoveryUrl) {
-
-        Objects.requireNonNull(validAudiences);
-        Objects.requireNonNull(validTenantIds);
-        Objects.requireNonNull(keyDiscoveryUrl);
         try {
             if (keyResolver == null) {
                 keyResolver = new JwkKeyResolver(keyDiscoveryUrl);
@@ -89,9 +85,8 @@ public class TokenHelper {
             @NonNull final String[] validTenantIds, @NonNull final List<String> serializedTokens,
             @NonNull final String keyDiscoveryUrl) {
         for (final String serializedToken : serializedTokens) {
-            if (!isValidationTokenValid(Objects.requireNonNull(validAudiences),
-                    Objects.requireNonNull(validTenantIds), Objects.requireNonNull(serializedToken),
-                    Objects.requireNonNull(keyDiscoveryUrl))) {
+            if (!isValidationTokenValid(validAudiences, validTenantIds,
+                Objects.requireNonNull(serializedToken), keyDiscoveryUrl)) {
                 return false;
             }
         }

@@ -20,5 +20,25 @@
     "selfsignedjks",
     "socketio",
     "ultraq"
+  ],
+  "java.compile.nullAnalysis.mode": "automatic",
+  "cSpell.words": [
+    "activedirectory",
+    "apponly",
+    "autoconfigure",
+    "Configurer",
+    "genkey",
+    "graphwebhook",
+    "HMACSHA",
+    "keyalg",
+    "keydiscoveryurl",
+    "keysize",
+    "keytool",
+    "mailfolders",
+    "OAEP",
+    "PKCS",
+    "storename",
+    "storepass",
+    "unsubscribeapponly"
   ]
 }

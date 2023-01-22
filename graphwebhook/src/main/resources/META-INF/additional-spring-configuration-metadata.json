@@ -1,7 +1,7 @@
 {
   "properties": [
     {
-      "name": "azure.activedirectory.keydiscoveryurl",
+      "name": "spring.cloud.azure.active-directory.keydiscoveryurl",
       "type": "java.lang.String",
       "description": "The URL to the JWKS download for Azure"
     },

@@ -146,7 +146,7 @@ Alternatively if you are not using Visual Studio Code, from the root of the repo
 ```shell
 mvn install
 mvn package
-java -jar target/rest-service-0.0.1-SNAPSHOT.jar
+java -jar target/graphwebhook-0.0.1-SNAPSHOT.jar
 ```
 
 ### Use the app to create a subscription
