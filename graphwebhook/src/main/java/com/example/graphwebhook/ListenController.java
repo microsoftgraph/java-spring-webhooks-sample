@@ -5,7 +5,7 @@ package com.example.graphwebhook;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-
+import javax.annotation.Nonnull;
 import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIONamespace;
@@ -98,27 +98,29 @@ public class ListenController {
      */
     @PostMapping("/listen")
     public CompletableFuture<ResponseEntity<String>> handleNotification(
-            @RequestBody final String jsonPayload) {
+            @RequestBody @Nonnull final String jsonPayload) {
         // Deserialize the JSON body into a ChangeNotificationCollection
         final var serializer = new DefaultSerializer(new DefaultLogger());
         final var notifications =
                 serializer.deserializeObject(jsonPayload, ChangeNotificationCollection.class);
 
+        if (notifications == null) {
+            return CompletableFuture.completedFuture(ResponseEntity.accepted().body(""));
+        }
+
         // Check for validation tokens
         boolean areTokensValid = true;
-        if (notifications.validationTokens != null && !notifications.validationTokens.isEmpty()) {
+        if (!Objects.requireNonNull(notifications.validationTokens).isEmpty()) {
             areTokensValid = TokenHelper.areValidationTokensValid(new String[] {clientId},
-                    new String[] {tenantId},
-                    Objects.requireNonNull(notifications.validationTokens),
+                    new String[] {tenantId}, Objects.requireNonNull(notifications.validationTokens),
                     Objects.requireNonNull(keyDiscoveryUrl));
         }
 
         if (areTokensValid) {
-            for (ChangeNotification notification : notifications.value) {
+            for (ChangeNotification notification : Objects.requireNonNull(notifications.value)) {
                 // Look up subscription in store
-                var subscription =
-                        subscriptionStore.getSubscription(
-                                Objects.requireNonNull(notification.subscriptionId.toString()));
+                var subscription = subscriptionStore.getSubscription(
+                        Objects.requireNonNull(notification.subscriptionId).toString());
 
                 // Only process if we know about this subscription AND
                 // the client state in the notification matches
@@ -154,20 +156,19 @@ public class ListenController {
         final var oauthClient =
                 authorizedClientService.loadAuthorizedClient("graph", subscription.userId);
 
-        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        final var graphClient =
+                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         // The notification contains the relative URL to the message
         // so use the customRequest method instead of the fluent API
         // Once message has been retrieved, send the information via SocketIO
         // to subscribed clients
         graphClient.customRequest("/" + notification.resource, Message.class).buildRequest()
-                .getAsync()
-                .thenAccept(message -> {
+                .getAsync().thenAccept(message -> {
                     if (message != null)
-                    socketIONamespace
-                        .getRoomOperations(subscription.subscriptionId)
-                        .sendEvent("notificationReceived", new NewMessageNotification(message));
-                    });
+                        socketIONamespace.getRoomOperations(subscription.subscriptionId).sendEvent(
+                                "notificationReceived", new NewMessageNotification(message));
+                });
     }
 
 
@@ -181,22 +182,21 @@ public class ListenController {
             @NonNull final ChangeNotification notification,
             @NonNull final SubscriptionRecord subscription) {
         // Decrypt the encrypted key from the notification
-        final var decryptedKey =
-            Objects.requireNonNull(certificateStore.getEncryptionKey(
-                    Objects.requireNonNull(notification.encryptedContent.dataKey)));
+        final var decryptedKey = Objects.requireNonNull(certificateStore
+                .getEncryptionKey(Objects.requireNonNull(notification.encryptedContent).dataKey));
 
         // Validate the signature
-        if (certificateStore.isDataSignatureValid(
-            decryptedKey,
-            Objects.requireNonNull(notification.encryptedContent.data),
-            Objects.requireNonNull(notification.encryptedContent.dataSignature))) {
+        if (certificateStore.isDataSignatureValid(decryptedKey,
+                Objects.requireNonNull(notification.encryptedContent).data,
+                Objects.requireNonNull(notification.encryptedContent).dataSignature)) {
             // Decrypt the data using the decrypted key
             final var decryptedData = certificateStore.getDecryptedData(decryptedKey,
-                Objects.requireNonNull(notification.encryptedContent.data));
+                    Objects.requireNonNull(notification.encryptedContent).data);
+
             // Deserialize the decrypted JSON into a ChatMessage
             final var serializer = new DefaultSerializer(new DefaultLogger());
-            final var chatMessage = Objects.requireNonNull(
-                serializer.deserializeObject(decryptedData, ChatMessage.class));
+            final var chatMessage = Objects.requireNonNull(serializer
+                    .deserializeObject(Utilities.ensureNonNull(decryptedData), ChatMessage.class));
             // Send the information to subscribed clients
             socketIONamespace.getRoomOperations(subscription.subscriptionId)
                     .sendEvent("notificationReceived", new NewChatMessageNotification(chatMessage));

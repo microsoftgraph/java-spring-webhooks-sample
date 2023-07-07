@@ -6,11 +6,11 @@ package com.example.graphwebhook;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import javax.annotation.Nonnull;
 import java.util.Objects;
 
 import com.microsoft.graph.models.ChangeType;
 import com.microsoft.graph.models.Subscription;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,8 +48,9 @@ public class WatchController {
     private String notificationHost;
 
     /**
-     * The delegated auth page of the app. This will subscribe for the authenticated user's
-     * inbox on Exchange Online
+     * The delegated auth page of the app. This will subscribe for the authenticated user's inbox on
+     * Exchange Online
+     *
      * @param model the model provided by Spring
      * @param authentication authentication information for the request
      * @param redirectAttributes redirect attributes provided by Spring
@@ -57,11 +58,12 @@ public class WatchController {
      * @return the name of the template used to render the response
      */
     @GetMapping("/delegated")
-    public CompletableFuture<String> delegated(Model model, OAuth2AuthenticationToken authentication,
-            RedirectAttributes redirectAttributes,
+    public CompletableFuture<String> delegated(Model model,
+            OAuth2AuthenticationToken authentication, RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        final var graphClient =
+                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         // Get the authenticated user's info
         final var userFuture = graphClient.me().buildRequest()
@@ -82,20 +84,23 @@ public class WatchController {
         return userFuture.thenCombine(subscriptionFuture, (user, subscription) -> {
             log.info("Created subscription {} for user {}", subscription.id, user.displayName);
 
-            // Save the authorized client so we can use it later from the notification controller
+            // Save the authorized client so we can use it later from the notification
+            // controller
             authorizedClientService.saveAuthorizedClient(oauthClient, authentication);
 
             // Add information to the model
             model.addAttribute("user", user);
             model.addAttribute("subscriptionId", subscription.id);
 
-            final var subscriptionJson =
-                    graphClient.getHttpProvider().getSerializer().serializeObject(subscription);
+            final var subscriptionJson = Objects
+                    .requireNonNull(
+                            Objects.requireNonNull(graphClient.getHttpProvider()).getSerializer())
+                    .serializeObject(subscription);
             model.addAttribute("subscription", subscriptionJson);
 
             // Add record in subscription store
             subscriptionStore.addSubscription(subscription,
-                Objects.requireNonNull(authentication.getName()));
+                    Objects.requireNonNull(authentication.getName()));
 
             model.addAttribute("success", "Subscription created.");
 
@@ -109,8 +114,10 @@ public class WatchController {
     }
 
 
-    /** The app-only auth page of the app. This will subscribe for notifications on all new
-     * Teams channel messages
+    /**
+     * The app-only auth page of the app. This will subscribe for notifications on all new Teams
+     * channel messages
+     *
      * @param model the model provided by Spring
      * @param redirectAttributes redirect attributes provided by Spring
      * @param oauthClient an app-only auth OAuth2 client
@@ -120,13 +127,16 @@ public class WatchController {
     public CompletableFuture<String> apponly(Model model, RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        final var graphClient =
+                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         // Apps are only allowed one subscription to the /teams/getAllMessages resource
         // If we already had one, delete it so we can create a new one
         final var existingSubscriptions = subscriptionStore.getSubscriptionsForUser(APP_ONLY);
         for (final var sub : existingSubscriptions) {
-            graphClient.subscriptions(sub.subscriptionId).buildRequest().delete();
+
+            graphClient.subscriptions(Utilities.ensureNonNull(sub.subscriptionId)).buildRequest()
+                    .delete();
         }
 
         // Create the subscription
@@ -147,7 +157,8 @@ public class WatchController {
                     // Add information to the model
                     model.addAttribute("subscriptionId", subscription.id);
 
-                    var subscriptionJson = graphClient.getHttpProvider().getSerializer()
+                    var subscriptionJson = Objects.requireNonNull(
+                            Objects.requireNonNull(graphClient.getHttpProvider()).getSerializer())
                             .serializeObject(subscription);
                     model.addAttribute("subscription", subscriptionJson);
 
@@ -167,16 +178,18 @@ public class WatchController {
 
     /**
      * Deletes a subscription and logs the user out
+     *
      * @param subscriptionId the subscription ID to delete
      * @param oauthClient a delegated auth OAuth2 client for the authenticated user
      * @return a redirect to the logout page
      */
     @GetMapping("/unsubscribe")
     public CompletableFuture<String> unsubscribe(
-            @RequestParam(value = "subscriptionId") final String subscriptionId,
+            @RequestParam(value = "subscriptionId") @Nonnull final String subscriptionId,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        final var graphClient =
+                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
                 .thenApply(sub -> {
@@ -191,16 +204,18 @@ public class WatchController {
 
     /**
      * Deletes an app-only subscription
+     *
      * @param subscriptionId the subscription ID to delete
      * @param oauthClient an app-only auth OAuth2 client
      * @return a redirect to the home page
      */
     @GetMapping("/unsubscribeapponly")
     public CompletableFuture<String> unsubscribeapponly(
-            @RequestParam(value = "subscriptionId") final String subscriptionId,
+            @RequestParam(value = "subscriptionId") @Nonnull final String subscriptionId,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient = GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        final var graphClient =
+                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
         return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
                 .thenApply(sub -> {

@@ -23,16 +23,11 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.apply(aadWebApplication())
-                .and()
-            .securityContext().requireExplicitSave(false)
-                .and()
-            .csrf()
-                .ignoringRequestMatchers("/listen")
-                .and()
-            .authorizeHttpRequests()
-                .requestMatchers(protectedRoutes).authenticated()
-                .anyRequest().permitAll();
+        http.securityContext(context -> context.requireExplicitSave(false))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/listen"))
+                .authorizeHttpRequests(authorize -> authorize.requestMatchers(protectedRoutes)
+                        .authenticated().anyRequest().permitAll())
+                .apply(aadWebApplication());
 
         return http.build();
     }
