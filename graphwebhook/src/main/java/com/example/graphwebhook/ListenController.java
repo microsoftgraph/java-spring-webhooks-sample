@@ -110,7 +110,8 @@ public class ListenController {
 
         // Check for validation tokens
         boolean areTokensValid = true;
-        if (!Objects.requireNonNull(notifications.validationTokens).isEmpty()) {
+        if (notifications.validationTokens != null
+                && !Objects.requireNonNull(notifications.validationTokens).isEmpty()) {
             areTokensValid = TokenHelper.areValidationTokensValid(new String[] {clientId},
                     new String[] {tenantId}, Objects.requireNonNull(notifications.validationTokens),
                     Objects.requireNonNull(keyDiscoveryUrl));
