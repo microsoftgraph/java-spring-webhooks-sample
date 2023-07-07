@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import com.microsoft.graph.models.Subscription;
+import jakarta.annotation.Nonnull;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -28,11 +29,10 @@ public class SubscriptionStoreService {
      * @param subscription the subscription to add
      * @param userId the user's ID
      */
-    public void addSubscription(@NonNull final Subscription subscription,
+    public void addSubscription(@NonNull @Nonnull final Subscription subscription,
             @NonNull final String userId) {
-        var newRecord = new SubscriptionRecord(Objects.requireNonNull(subscription.id),
-            Objects.requireNonNull(userId),
-            Objects.requireNonNull(subscription.clientState));
+        var newRecord = new SubscriptionRecord(subscription.id, Objects.requireNonNull(userId),
+                Objects.requireNonNull(subscription.clientState));
         subscriptions.put(subscription.id, newRecord);
     }
 

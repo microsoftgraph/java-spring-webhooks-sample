@@ -6,7 +6,7 @@ package com.example.graphwebhook;
 import java.net.URL;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-
+import javax.annotation.Nonnull;
 import com.microsoft.graph.authentication.IAuthenticationProvider;
 import org.springframework.lang.NonNull;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -24,8 +24,9 @@ public class SpringOAuth2AuthProvider implements IAuthenticationProvider {
     }
 
     @Override
-    public CompletableFuture<String> getAuthorizationTokenAsync(URL requestUrl) {
-        return CompletableFuture.completedFuture(oauthClient.getAccessToken().getTokenValue());
+    @Nonnull
+    public CompletableFuture<String> getAuthorizationTokenAsync(@Nonnull URL requestUrl) {
+        return Utilities.ensureNonNull(
+                CompletableFuture.completedFuture(oauthClient.getAccessToken().getTokenValue()));
     }
-
 }

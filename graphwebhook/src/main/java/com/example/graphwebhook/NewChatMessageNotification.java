@@ -8,9 +8,8 @@ import com.microsoft.graph.models.ChatMessage;
 import org.springframework.lang.NonNull;
 
 /**
- * Represents the information sent via SocketIO to subscribed
- * clients when a new Teams channel message notification
- * is received
+ * Represents the information sent via SocketIO to subscribed clients when a new Teams channel
+ * message notification is received
  */
 public class NewChatMessageNotification {
 
@@ -25,8 +24,7 @@ public class NewChatMessageNotification {
     public final String body;
 
     public NewChatMessageNotification(@NonNull ChatMessage message) {
-        Objects.requireNonNull(message);
-        sender = message.from.user.displayName;
-        body = message.body.content;
+        sender = Objects.requireNonNull(Objects.requireNonNull(message.from).user).displayName;
+        body = Objects.requireNonNull(message.body).content;
     }
 }

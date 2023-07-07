@@ -11,7 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-import static com.azure.spring.cloud.autoconfigure.aad.AadWebApplicationHttpSecurityConfigurer.aadWebApplication;
+import static com.azure.spring.cloud.autoconfigure.implementation.aad.security.AadWebApplicationHttpSecurityConfigurer.aadWebApplication;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
@@ -23,16 +23,11 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.apply(aadWebApplication())
-                .and()
-            .securityContext().requireExplicitSave(false)
-                .and()
-            .csrf()
-                .ignoringRequestMatchers("/listen")
-                .and()
-            .authorizeHttpRequests()
-                .requestMatchers(protectedRoutes).authenticated()
-                .anyRequest().permitAll();
+        http.securityContext(context -> context.requireExplicitSave(false))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/listen"))
+                .authorizeHttpRequests(authorize -> authorize.requestMatchers(protectedRoutes)
+                        .authenticated().anyRequest().permitAll())
+                .apply(aadWebApplication());
 
         return http.build();
     }
