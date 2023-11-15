@@ -94,7 +94,7 @@
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk14</artifactId>
-			<version>1.76</version>
+			<version>1.77</version>
 		</dependency>
 	</dependencies>
 
