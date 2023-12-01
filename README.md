@@ -6,9 +6,9 @@ products:
 - ms-graph
 - microsoft-graph-mail-api
 - microsoft-graph-teamwork-api
-- microsoft-graph-change-notifications-api
 - office-exchange-online
-- azure-active-directory
+- entra-id
+- entra
 - office-teams
 description: Create Microsoft Graph webhook subscriptions for a Java Spring app, so that it can receive notifications of changes for any resource. This sample also supports receiving change notifications with data, validating and decrypting the payload.
 extensions:
