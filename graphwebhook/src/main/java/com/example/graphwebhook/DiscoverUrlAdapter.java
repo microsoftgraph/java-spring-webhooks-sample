@@ -14,44 +14,39 @@ import com.auth0.jwk.UrlJwkProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
-import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JweHeader;
 import io.jsonwebtoken.JwsHeader;
-import io.jsonwebtoken.SigningKeyResolverAdapter;
-
+import io.jsonwebtoken.LocatorAdapter;
 /**
  * Custom implementation of SigningKeyResolverAdapter that retrieves the signing key from the
  * Microsoft identity platform's JWKS endpoint
  */
-public class JwkKeyResolver extends SigningKeyResolverAdapter {
+public class DiscoverUrlAdapter extends LocatorAdapter<Key> {
 
     private final JwkProvider keyStore;
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    public JwkKeyResolver(@NonNull final String keyDiscoveryUrl)
+    public DiscoverUrlAdapter(@NonNull final String keyDiscoveryUrl)
             throws URISyntaxException, MalformedURLException {
         this.keyStore =
                 new UrlJwkProvider(new URI(Objects.requireNonNull(keyDiscoveryUrl)).toURL());
     }
 
-
-    /**
-     * @param jwsHeader The header from a JSON web token containing the key ID
-     * @param claims claims from the JSON web token
-     * @return the signing key retrieved from the JWKS endpoint
-     */
     @Override
-    @SuppressWarnings("all")
-    public Key resolveSigningKey(@NonNull final JwsHeader jwsHeader,
-            @Nullable final Claims claims) {
-        Objects.requireNonNull(jwsHeader);
+    protected Key locate(JwsHeader header) {
+        Objects.requireNonNull(header);
         try {
-            var keyId = jwsHeader.getKeyId();
+            var keyId = header.getKeyId();
             var publicKey = keyStore.get(keyId);
             return publicKey.getPublicKey();
         } catch (final Exception e) {
             log.error(e.getMessage());
             return null;
         }
+    }
+
+    @Override
+    protected Key locate(JweHeader header) {
+        return null;
     }
 }

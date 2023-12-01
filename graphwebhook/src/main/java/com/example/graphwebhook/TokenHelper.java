@@ -3,12 +3,15 @@
 
 package com.example.graphwebhook;
 
+import java.security.Key;
+import java.security.PublicKey;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.Locator;
 
 /**
  * Helper class for validating the JSON web token included in Microsoft Graph change notifications
@@ -16,7 +19,7 @@ import io.jsonwebtoken.Jwts;
  */
 public class TokenHelper {
 
-    private static JwkKeyResolver keyResolver;
+    private static Locator<Key> keyLocator;
     private static final Logger log = LoggerFactory.getLogger(TokenHelper.class);
 
     private TokenHelper() {
@@ -37,24 +40,24 @@ public class TokenHelper {
             @NonNull final String[] validTenantIds, @NonNull final String serializedToken,
             @NonNull final String keyDiscoveryUrl) {
         try {
-            if (keyResolver == null) {
-                keyResolver = new JwkKeyResolver(keyDiscoveryUrl);
+            if (keyLocator == null) {
+                keyLocator = new DiscoverUrlAdapter(keyDiscoveryUrl);
             }
 
             // Parse the serialized token
             // As part of this process, the signature is validated
             // This throws if the signature is invalid
-            var token = Jwts.parserBuilder().setSigningKeyResolver(keyResolver).build()
-                    .parseClaimsJws(Objects.requireNonNull(serializedToken));
+            var token = Jwts.parser().keyLocator(keyLocator).build()
+                    .parseSignedClaims(Objects.requireNonNull(serializedToken));
 
-            var body = token.getBody();
+            var body = token.getPayload();
             var audience = body.getAudience();
             var issuer = body.getIssuer();
 
             // The audience should match the app's client ID
             boolean isAudienceValid = false;
             for (final String validAudience : validAudiences) {
-                isAudienceValid = isAudienceValid || validAudience.equals(audience);
+                isAudienceValid = isAudienceValid || audience.contains(validAudience);
             }
 
             // Microsoft identity tokens will have an issuer like
