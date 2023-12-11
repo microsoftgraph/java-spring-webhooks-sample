@@ -4,8 +4,6 @@ languages:
 - java
 products:
 - ms-graph
-- microsoft-graph-mail-api
-- microsoft-graph-teamwork-api
 - office-exchange-online
 - entra-id
 - entra
