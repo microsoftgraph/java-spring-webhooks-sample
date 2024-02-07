@@ -4,7 +4,6 @@
 package com.example.graphwebhook;
 
 import java.security.Key;
-import java.security.PublicKey;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
