@@ -31,7 +31,7 @@ extensions:
 - A tenant administrator account on a Microsoft 365 tenant. You can get a development tenant for free by joining the [Microsoft 365 Developer Program](https://developer.microsoft.com/microsoft-365/dev-program).
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [ngrok](https://ngrok.com/).
-- [JDK14](https://docs.oracle.com/en/java/javase/14/install/)
+- [JDK21](https://adoptium.net/temurin/releases/)
 - [Maven](https://maven.apache.org/).
 
 ### How the sample application works

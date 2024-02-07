@@ -10,8 +10,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-
-import static com.azure.spring.cloud.autoconfigure.implementation.aad.security.AadWebApplicationHttpSecurityConfigurer.aadWebApplication;
+import com.azure.spring.cloud.autoconfigure.implementation.aad.security.AadWebApplicationHttpSecurityConfigurer;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
@@ -27,7 +26,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/listen"))
                 .authorizeHttpRequests(authorize -> authorize.requestMatchers(protectedRoutes)
                         .authenticated().anyRequest().permitAll())
-                .apply(aadWebApplication());
+                .apply(AadWebApplicationHttpSecurityConfigurer.aadWebApplication());
 
         return http.build();
     }
