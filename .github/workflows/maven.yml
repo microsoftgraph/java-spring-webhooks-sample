@@ -6,14 +6,8 @@ name: Java CI with Maven
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-    - 'docs/**'
-    - '*.md'
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
 
 jobs:
   build:
