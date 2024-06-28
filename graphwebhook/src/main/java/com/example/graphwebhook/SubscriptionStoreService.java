@@ -31,9 +31,9 @@ public class SubscriptionStoreService {
      */
     public void addSubscription(@NonNull @Nonnull final Subscription subscription,
             @NonNull final String userId) {
-        var newRecord = new SubscriptionRecord(subscription.id, Objects.requireNonNull(userId),
-                Objects.requireNonNull(subscription.clientState));
-        subscriptions.put(subscription.id, newRecord);
+        var newRecord = new SubscriptionRecord(subscription.getId(), Objects.requireNonNull(userId),
+                Objects.requireNonNull(subscription.getClientState()));
+        subscriptions.put(subscription.getId(), newRecord);
     }
 
 

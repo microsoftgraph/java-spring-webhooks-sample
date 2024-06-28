@@ -10,7 +10,7 @@
   <div layout:fragment="content">
     <h1>Notifications</h1>
     <p class="fs-5 mb-3">
-      Notifications should appear below when new messages sent to any Teams
+      Notifications should appear below when new messages are sent to any Teams
       channel in your organization.
     </p>
     <div class="d-flex">
@@ -35,7 +35,7 @@
       <tbody id="notifications"></tbody>
     </table>
 
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2.4.0/dist/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script th:inline="javascript">
       const socket = io('http://localhost:8081/emitNotification');
 
