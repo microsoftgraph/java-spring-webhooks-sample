@@ -20,6 +20,7 @@ public class SecurityConfig {
     @Value("${app.protect.authenticated}")
     private String[] protectedRoutes;
 
+    @SuppressWarnings("removal")
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.securityContext(context -> context.requireExplicitSave(false))
