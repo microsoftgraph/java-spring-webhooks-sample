@@ -9,9 +9,9 @@ import java.util.Objects;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
+import com.microsoft.graph.models.Entity;
 import com.microsoft.graph.models.Subscription;
-import com.microsoft.kiota.serialization.JsonSerializationWriter;
-import com.microsoft.kiota.serialization.Parsable;
+import com.microsoft.kiota.serialization.KiotaJsonSerialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -216,14 +216,16 @@ public class WatchController {
         return REDIRECT_HOME;
     }
 
-    private String getJsonRepresentation(final Parsable graphObject) {
+    private <T extends Entity> String getJsonRepresentation(final T graphObject) {
         try {
+            graphObject.getBackingStore().setIsInitializationCompleted(false);
+            final var jsonRepresentation = KiotaJsonSerialization.serializeAsString(graphObject);
             // Use Graph SDK's underlying JSON serializer
-            final var writer = new JsonSerializationWriter();
-            writer.writeObjectValue(null, graphObject);
-            final var jsonRepresentation =
-                    new String(writer.getSerializedContent().readAllBytes(), "UTF-8");
-            writer.close();
+            // final var writer = new JsonSerializationWriter();
+            // writer.writeObjectValue(null, graphObject);
+            // final var jsonRepresentation =
+            //         new String(writer.getSerializedContent().readAllBytes(), "UTF-8");
+            // writer.close();
 
             // Use Gson to pretty-print
             final var gson = new GsonBuilder().setPrettyPrinting().create();
