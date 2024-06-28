@@ -220,13 +220,6 @@ public class WatchController {
         try {
             graphObject.getBackingStore().setIsInitializationCompleted(false);
             final var jsonRepresentation = KiotaJsonSerialization.serializeAsString(graphObject);
-            // Use Graph SDK's underlying JSON serializer
-            // final var writer = new JsonSerializationWriter();
-            // writer.writeObjectValue(null, graphObject);
-            // final var jsonRepresentation =
-            //         new String(writer.getSerializedContent().readAllBytes(), "UTF-8");
-            // writer.close();
-
             // Use Gson to pretty-print
             final var gson = new GsonBuilder().setPrettyPrinting().create();
             final var jsonElement = JsonParser.parseString(jsonRepresentation);
