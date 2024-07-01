@@ -216,6 +216,7 @@ public class WatchController {
         return REDIRECT_HOME;
     }
 
+
     private <T extends Entity> String getJsonRepresentation(final T graphObject) {
         try {
             graphObject.getBackingStore().setIsInitializationCompleted(false);
