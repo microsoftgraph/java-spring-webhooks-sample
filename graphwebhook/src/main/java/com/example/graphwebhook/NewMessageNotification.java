@@ -25,7 +25,7 @@ public class NewMessageNotification {
 
     public NewMessageNotification(@NonNull Message message) {
         Objects.requireNonNull(message);
-        subject = message.subject;
-        id = message.id;
+        subject = message.getSubject();
+        id = message.getId();
     }
 }

@@ -24,7 +24,7 @@ public class NewChatMessageNotification {
     public final String body;
 
     public NewChatMessageNotification(@NonNull ChatMessage message) {
-        sender = Objects.requireNonNull(Objects.requireNonNull(message.from).user).displayName;
-        body = Objects.requireNonNull(message.body).content;
+        sender = Objects.requireNonNull(Objects.requireNonNull(message.getFrom()).getUser()).getDisplayName();
+        body = Objects.requireNonNull(message.getBody()).getContent();
     }
 }

@@ -5,12 +5,13 @@ package com.example.graphwebhook;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import javax.annotation.Nonnull;
 import java.util.Objects;
 
-import com.microsoft.graph.models.ChangeType;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
+import com.microsoft.graph.models.Entity;
 import com.microsoft.graph.models.Subscription;
+import com.microsoft.kiota.serialization.KiotaJsonSerialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,31 +59,31 @@ public class WatchController {
      * @return the name of the template used to render the response
      */
     @GetMapping("/delegated")
-    public CompletableFuture<String> delegated(Model model,
+    public String delegated(Model model,
             OAuth2AuthenticationToken authentication, RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient =
-                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        try {
+            final var graphClient =
+                    GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
-        // Get the authenticated user's info
-        final var userFuture = graphClient.me().buildRequest()
-                .select("displayName,mail,userPrincipalName").getAsync();
+            // Get the authenticated user's info
+            final var user = graphClient.me().get(config -> {
+                config.queryParameters.select = new String[] { "displayName", "mail", "userPrincipalName" };
+            });
 
-        // Create the subscription
-        final var subscriptionRequest = new Subscription();
-        subscriptionRequest.changeType = ChangeType.CREATED.toString();
-        subscriptionRequest.notificationUrl = notificationHost + "/listen";
-        subscriptionRequest.resource = "me/mailfolders/inbox/messages";
-        subscriptionRequest.clientState = UUID.randomUUID().toString();
-        subscriptionRequest.includeResourceData = false;
-        subscriptionRequest.expirationDateTime = OffsetDateTime.now().plusHours(1);
+            // Create the subscription
+            final var subscriptionRequest = new Subscription();
+            subscriptionRequest.setChangeType("created");
+            subscriptionRequest.setNotificationUrl(notificationHost + "/listen");
+            subscriptionRequest.setResource("me/mailfolders/inbox/messages");
+            subscriptionRequest.setClientState(UUID.randomUUID().toString());
+            subscriptionRequest.setIncludeResourceData(false);
+            subscriptionRequest.setExpirationDateTime(OffsetDateTime.now().plusHours(1));
 
-        final var subscriptionFuture =
-                graphClient.subscriptions().buildRequest().postAsync(subscriptionRequest);
+            final Subscription subscription = graphClient.subscriptions().post(subscriptionRequest);
 
-        return userFuture.thenCombine(subscriptionFuture, (user, subscription) -> {
-            log.info("Created subscription {} for user {}", subscription.id, user.displayName);
+            log.info("Created subscription {} for user {}", subscription.getId(), user.getDisplayName());
 
             // Save the authorized client so we can use it later from the notification
             // controller
@@ -90,12 +91,9 @@ public class WatchController {
 
             // Add information to the model
             model.addAttribute("user", user);
-            model.addAttribute("subscriptionId", subscription.id);
+            model.addAttribute("subscriptionId", subscription.getId());
 
-            final var subscriptionJson = Objects
-                    .requireNonNull(
-                            Objects.requireNonNull(graphClient.getHttpProvider()).getSerializer())
-                    .serializeObject(subscription);
+            final var subscriptionJson = this.getJsonRepresentation(subscription);
             model.addAttribute("subscription", subscriptionJson);
 
             // Add record in subscription store
@@ -105,12 +103,12 @@ public class WatchController {
             model.addAttribute("success", "Subscription created.");
 
             return "delegated";
-        }).exceptionally(e -> {
+        } catch (Exception e) {
             log.error(CREATE_SUBSCRIPTION_ERROR, e);
             redirectAttributes.addFlashAttribute("error", CREATE_SUBSCRIPTION_ERROR);
             redirectAttributes.addFlashAttribute("debug", e.getMessage());
             return REDIRECT_HOME;
-        });
+        }
     }
 
 
@@ -124,55 +122,53 @@ public class WatchController {
      * @return the name of the template used to render the response
      */
     @GetMapping("/apponly")
-    public CompletableFuture<String> apponly(Model model, RedirectAttributes redirectAttributes,
+    public String apponly(Model model, RedirectAttributes redirectAttributes,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
-        final var graphClient =
-                GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
+        try {
+            final var graphClient =
+                    GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
-        // Apps are only allowed one subscription to the /teams/getAllMessages resource
-        // If we already had one, delete it so we can create a new one
-        final var existingSubscriptions = subscriptionStore.getSubscriptionsForUser(APP_ONLY);
-        for (final var sub : existingSubscriptions) {
+            // Apps are only allowed one subscription to the /teams/getAllMessages resource
+            // If we already had one, delete it so we can create a new one
+            final var existingSubscriptions = subscriptionStore.getSubscriptionsForUser(APP_ONLY);
+            for (final var sub : existingSubscriptions) {
 
-            graphClient.subscriptions(Utilities.ensureNonNull(sub.subscriptionId)).buildRequest()
-                    .delete();
+                graphClient.subscriptions().bySubscriptionId(sub.subscriptionId).delete();
+            }
+
+            // Create the subscription
+            final var subscriptionRequest = new Subscription();
+            subscriptionRequest.setChangeType("created");
+            subscriptionRequest.setNotificationUrl(notificationHost + "/listen");
+            subscriptionRequest.setResource("/teams/getAllMessages");
+            subscriptionRequest.setClientState(UUID.randomUUID().toString());
+            subscriptionRequest.setIncludeResourceData(true);
+            subscriptionRequest.setExpirationDateTime(OffsetDateTime.now().plusHours(1));
+            subscriptionRequest.setEncryptionCertificate(certificateStore.getBase64EncodedCertificate());
+            subscriptionRequest.setEncryptionCertificateId(certificateStore.getCertificateId());
+
+            final var subscription = graphClient.subscriptions().post(subscriptionRequest);
+
+            log.info("Created subscription {} for all Teams messages", subscription.getId());
+
+            // Add information to the model
+            model.addAttribute("subscriptionId", subscription.getId());
+
+            var subscriptionJson = this.getJsonRepresentation(subscription);
+            model.addAttribute("subscription", subscriptionJson);
+
+            // Add record in subscription store
+            subscriptionStore.addSubscription(subscription, APP_ONLY);
+
+            model.addAttribute("success", "Subscription created.");
+            return "apponly";
+        } catch (Exception e) {
+            log.error(CREATE_SUBSCRIPTION_ERROR, e);
+            redirectAttributes.addFlashAttribute("error", CREATE_SUBSCRIPTION_ERROR);
+            redirectAttributes.addFlashAttribute("debug", e.getMessage());
+            return REDIRECT_HOME;
         }
-
-        // Create the subscription
-        final var subscriptionRequest = new Subscription();
-        subscriptionRequest.changeType = ChangeType.CREATED.toString();
-        subscriptionRequest.notificationUrl = notificationHost + "/listen";
-        subscriptionRequest.resource = "/teams/getAllMessages";
-        subscriptionRequest.clientState = UUID.randomUUID().toString();
-        subscriptionRequest.includeResourceData = true;
-        subscriptionRequest.expirationDateTime = OffsetDateTime.now().plusHours(1);
-        subscriptionRequest.encryptionCertificate = certificateStore.getBase64EncodedCertificate();
-        subscriptionRequest.encryptionCertificateId = certificateStore.getCertificateId();
-
-        return graphClient.subscriptions().buildRequest().postAsync(subscriptionRequest)
-                .thenApply(subscription -> {
-                    log.info("Created subscription {} for all Teams messages", subscription.id);
-
-                    // Add information to the model
-                    model.addAttribute("subscriptionId", subscription.id);
-
-                    var subscriptionJson = Objects.requireNonNull(
-                            Objects.requireNonNull(graphClient.getHttpProvider()).getSerializer())
-                            .serializeObject(subscription);
-                    model.addAttribute("subscription", subscriptionJson);
-
-                    // Add record in subscription store
-                    subscriptionStore.addSubscription(subscription, APP_ONLY);
-
-                    model.addAttribute("success", "Subscription created.");
-                    return "apponly";
-                }).exceptionally(e -> {
-                    log.error(CREATE_SUBSCRIPTION_ERROR, e);
-                    redirectAttributes.addFlashAttribute("error", CREATE_SUBSCRIPTION_ERROR);
-                    redirectAttributes.addFlashAttribute("debug", e.getMessage());
-                    return REDIRECT_HOME;
-                });
     }
 
 
@@ -184,21 +180,16 @@ public class WatchController {
      * @return a redirect to the logout page
      */
     @GetMapping("/unsubscribe")
-    public CompletableFuture<String> unsubscribe(
-            @RequestParam(value = "subscriptionId") @Nonnull final String subscriptionId,
+    public String unsubscribe(
+            @RequestParam(value = "subscriptionId") final @jakarta.annotation.Nonnull String subscriptionId,
             @RegisteredOAuth2AuthorizedClient("graph") OAuth2AuthorizedClient oauthClient) {
 
         final var graphClient =
                 GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
-        return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
-                .thenApply(sub -> {
-                    // Remove subscription from store
-                    subscriptionStore.deleteSubscription(Objects.requireNonNull(subscriptionId));
-
-                    // Logout user
-                    return REDIRECT_LOGOUT;
-                });
+        graphClient.subscriptions().bySubscriptionId(subscriptionId).delete();
+        subscriptionStore.deleteSubscription(Objects.requireNonNull(subscriptionId));
+        return REDIRECT_LOGOUT;
     }
 
 
@@ -210,20 +201,33 @@ public class WatchController {
      * @return a redirect to the home page
      */
     @GetMapping("/unsubscribeapponly")
-    public CompletableFuture<String> unsubscribeapponly(
-            @RequestParam(value = "subscriptionId") @Nonnull final String subscriptionId,
+    public String unsubscribeapponly(
+            @RequestParam(value = "subscriptionId") final @jakarta.annotation.Nonnull String subscriptionId,
             @RegisteredOAuth2AuthorizedClient("apponly") OAuth2AuthorizedClient oauthClient) {
 
         final var graphClient =
                 GraphClientHelper.getGraphClient(Objects.requireNonNull(oauthClient));
 
-        return graphClient.subscriptions(subscriptionId).buildRequest().deleteAsync()
-                .thenApply(sub -> {
-                    // Remove subscription from store
-                    subscriptionStore.deleteSubscription(Objects.requireNonNull(subscriptionId));
+        graphClient.subscriptions().bySubscriptionId(subscriptionId).delete();
+        // Remove subscription from store
+        subscriptionStore.deleteSubscription(Objects.requireNonNull(subscriptionId));
 
-                    // Logout user
-                    return REDIRECT_HOME;
-                });
+        // Logout user
+        return REDIRECT_HOME;
+    }
+
+
+    private <T extends Entity> String getJsonRepresentation(final T graphObject) {
+        try {
+            graphObject.getBackingStore().setIsInitializationCompleted(false);
+            final var jsonRepresentation = KiotaJsonSerialization.serializeAsString(graphObject);
+            // Use Gson to pretty-print
+            final var gson = new GsonBuilder().setPrettyPrinting().create();
+            final var jsonElement = JsonParser.parseString(jsonRepresentation);
+            return gson.toJson(jsonElement);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
     }
 }

@@ -27,6 +27,7 @@
     "apponly",
     "autoconfigure",
     "Configurer",
+    "Deserializers",
     "genkey",
     "graphwebhook",
     "HMACSHA",

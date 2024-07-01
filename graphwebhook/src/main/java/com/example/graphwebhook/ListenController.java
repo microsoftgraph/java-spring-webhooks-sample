@@ -3,21 +3,24 @@
 
 package com.example.graphwebhook;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import javax.annotation.Nonnull;
 import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIONamespace;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.DataListener;
-import com.microsoft.graph.logger.DefaultLogger;
-import com.microsoft.graph.models.ChangeNotification;
-import com.microsoft.graph.models.ChangeNotificationCollection;
+import com.example.graphwebhook.notifications.ChangeNotification;
+import com.example.graphwebhook.notifications.ChangeNotificationCollection;
+import com.example.graphwebhook.notifications.ChangeNotificationEncryptedContent;
 import com.microsoft.graph.models.ChatMessage;
 import com.microsoft.graph.models.Message;
-import com.microsoft.graph.serializer.DefaultSerializer;
-
+import com.microsoft.kiota.HttpMethod;
+import com.microsoft.kiota.RequestInformation;
+import com.microsoft.kiota.serialization.KiotaJsonSerialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,50 +100,54 @@ public class ListenController {
      * @return A 202 Accepted response
      */
     @PostMapping("/listen")
-    public CompletableFuture<ResponseEntity<String>> handleNotification(
-            @RequestBody @Nonnull final String jsonPayload) {
-        // Deserialize the JSON body into a ChangeNotificationCollection
-        final var serializer = new DefaultSerializer(new DefaultLogger());
-        final var notifications =
-                serializer.deserializeObject(jsonPayload, ChangeNotificationCollection.class);
+    public ResponseEntity<String> handleNotification(
+            @RequestBody @NonNull final String jsonPayload) {
+        try {
+            // Deserialize the JSON body into a ChangeNotificationCollection
+            final ChangeNotificationCollection notifications =
+                    KiotaJsonSerialization.deserialize(jsonPayload,
+                        ChangeNotificationCollection::createFromDiscriminatorValue);
 
-        if (notifications == null) {
-            return CompletableFuture.completedFuture(ResponseEntity.accepted().body(""));
-        }
+            if (notifications == null) {
+                return ResponseEntity.accepted().body("");
+            }
 
-        // Check for validation tokens
-        boolean areTokensValid = true;
-        if (notifications.validationTokens != null
-                && !Objects.requireNonNull(notifications.validationTokens).isEmpty()) {
-            areTokensValid = TokenHelper.areValidationTokensValid(new String[] {clientId},
-                    new String[] {tenantId}, Objects.requireNonNull(notifications.validationTokens),
-                    Objects.requireNonNull(keyDiscoveryUrl));
-        }
+            // Check for validation tokens
+            boolean areTokensValid = true;
+            final List<String> validationTokens = notifications.getValidationTokens();
+            if (validationTokens != null && validationTokens.isEmpty()) {
+                areTokensValid = TokenHelper.areValidationTokensValid(new String[] {clientId},
+                        new String[] {tenantId}, Objects.requireNonNull(validationTokens),
+                        Objects.requireNonNull(keyDiscoveryUrl));
+            }
 
-        if (areTokensValid) {
-            for (ChangeNotification notification : Objects.requireNonNull(notifications.value)) {
-                // Look up subscription in store
-                var subscription = subscriptionStore.getSubscription(
-                        Objects.requireNonNull(notification.subscriptionId).toString());
+            if (areTokensValid) {
+                for (ChangeNotification notification : Objects.requireNonNull(notifications.getValue())) {
+                    // Look up subscription in store
+                    var subscription = subscriptionStore.getSubscription(
+                            Objects.requireNonNull(notification.getSubscriptionId()));
 
-                // Only process if we know about this subscription AND
-                // the client state in the notification matches
-                if (subscription != null
-                        && subscription.clientState.equals(notification.clientState)) {
-                    if (notification.encryptedContent == null) {
-                        // No encrypted content, this is a new message notification
-                        // without resource data
-                        processNewMessageNotification(notification, subscription);
-                    } else {
-                        // With encrypted content, this is a new channel message
-                        // notification with encrypted resource data
-                        processNewChannelMessageNotification(notification, subscription);
+                    // Only process if we know about this subscription AND
+                    // the client state in the notification matches
+                    if (subscription != null
+                            && subscription.clientState.equals(notification.getClientState())) {
+                        if (notification.getEncryptedContent() == null) {
+                            // No encrypted content, this is a new message notification
+                            // without resource data
+                            processNewMessageNotification(notification, subscription);
+                        } else {
+                            // With encrypted content, this is a new channel message
+                            // notification with encrypted resource data
+                            processNewChannelMessageNotification(notification, subscription);
+                        }
                     }
                 }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        return CompletableFuture.completedFuture(ResponseEntity.accepted().body(""));
+        return ResponseEntity.accepted().body("");
     }
 
 
@@ -164,12 +171,24 @@ public class ListenController {
         // so use the customRequest method instead of the fluent API
         // Once message has been retrieved, send the information via SocketIO
         // to subscribed clients
-        graphClient.customRequest("/" + notification.resource, Message.class).buildRequest()
-                .getAsync().thenAccept(message -> {
-                    if (message != null)
-                        socketIONamespace.getRoomOperations(subscription.subscriptionId).sendEvent(
-                                "notificationReceived", new NewMessageNotification(message));
-                });
+
+        final RequestInformation request = new RequestInformation();
+        request.httpMethod = HttpMethod.GET;
+        URI messageUri;
+        try {
+            messageUri = new URI(
+                graphClient.getRequestAdapter().getBaseUrl() + "/" + notification.getResource());
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        request.setUri(messageUri);
+        final Message message = graphClient.getRequestAdapter().send(request, null,
+                Message::createFromDiscriminatorValue);
+        if (message != null)
+            socketIONamespace.getRoomOperations(subscription.subscriptionId)
+                    .sendEvent("notificationReceived", new NewMessageNotification(message));
     }
 
 
@@ -183,24 +202,30 @@ public class ListenController {
             @NonNull final ChangeNotification notification,
             @NonNull final SubscriptionRecord subscription) {
         // Decrypt the encrypted key from the notification
+        final ChangeNotificationEncryptedContent encryptedContent =
+                Objects.requireNonNull(notification.getEncryptedContent());
         final var decryptedKey = Objects.requireNonNull(certificateStore
-                .getEncryptionKey(Objects.requireNonNull(notification.encryptedContent).dataKey));
+                .getEncryptionKey(encryptedContent.getDataKey()));
 
         // Validate the signature
+        final String data = encryptedContent.getData();
         if (certificateStore.isDataSignatureValid(decryptedKey,
-                Objects.requireNonNull(notification.encryptedContent).data,
-                Objects.requireNonNull(notification.encryptedContent).dataSignature)) {
+                data,
+                encryptedContent.getDataSignature())) {
             // Decrypt the data using the decrypted key
-            final var decryptedData = certificateStore.getDecryptedData(decryptedKey,
-                    Objects.requireNonNull(notification.encryptedContent).data);
+            final var decryptedData = certificateStore.getDecryptedData(decryptedKey, data);
 
             // Deserialize the decrypted JSON into a ChatMessage
-            final var serializer = new DefaultSerializer(new DefaultLogger());
-            final var chatMessage = Objects.requireNonNull(serializer
-                    .deserializeObject(Utilities.ensureNonNull(decryptedData), ChatMessage.class));
-            // Send the information to subscribed clients
-            socketIONamespace.getRoomOperations(subscription.subscriptionId)
+            ChatMessage chatMessage;
+            try {
+                chatMessage = KiotaJsonSerialization.deserialize(decryptedData,
+                        ChatMessage::createFromDiscriminatorValue);
+                // Send the information to subscribed clients
+                socketIONamespace.getRoomOperations(subscription.subscriptionId)
                     .sendEvent("notificationReceived", new NewChatMessageNotification(chatMessage));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
