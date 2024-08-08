@@ -21,6 +21,7 @@ jobs:
       with:
         java-version: 21
         distribution: adopt
+        cache: maven
     - name: Build with Maven
       working-directory: graphwebhook
       run: mvn package --file pom.xml
